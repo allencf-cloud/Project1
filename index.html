@@ -1,0 +1,3872 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POST-GRAVITY — Focused Encounter Tactical Suppression</title>
+  <meta name="description" content="Turn-based tactical boss fight game inspired by Limbus Company and Project Moon featuring gravity manipulation, clash mechanics, and The Gravimetric Archives.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=JetBrains+Mono:wght@400;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       POST-GRAVITY: CORE DESIGN SYSTEM (PROJECT MOON / LIMBUS AESTHETICS)
+       ========================================================================== */
+    :root {
+      --bg-dark: #090a0f;
+      --bg-panel: rgba(14, 17, 24, 0.94);
+      --bg-panel-solid: #0d1017;
+      --border-steel: #2a313d;
+      --border-sharp: #434c5e;
+      --text-main: #d8dee9;
+      --text-muted: #7e8b9b;
+      --accent-yellow: #f5a623;
+      --accent-yellow-glow: rgba(245, 166, 35, 0.5);
+      --accent-cyan: #00f0ff;
+      --accent-cyan-glow: rgba(0, 240, 255, 0.45);
+      --accent-purple: #b347ff;
+      --accent-purple-glow: rgba(179, 71, 255, 0.45);
+      --accent-red: #ff334b;
+      --accent-red-glow: rgba(255, 51, 75, 0.5);
+      --accent-gold: #e5b869;
+      --accent-green: #3be896;
+
+      --font-display: 'Cinzel', serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-tech: 'Share Tech Mono', monospace;
+
+      --clash-dominating: #00f0ff;
+      --clash-favorable: #3be896;
+      --clash-neutral: #f5a623;
+      --clash-struggling: #ff8c33;
+      --clash-hopeless: #ff334b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Scanlines and CCTV Grain Overlay */
+    .crt-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 4px, 6px 100%;
+      z-index: 999;
+      opacity: 0.65;
+    }
+
+    .vignette-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.85), inset 0 0 160px rgba(0, 0, 0, 0.95);
+      z-index: 998;
+    }
+
+    /* Screen shake container */
+    #app-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: filter 0.3s ease;
+    }
+
+    /* ==========================================================================
+       TOP GLOBAL HUD BAR (LOBOTOMY/LIMBUS NAVIGATION)
+       ========================================================================== */
+    header.global-hud {
+      height: 52px;
+      background: linear-gradient(180deg, #11141c 0%, #08090d 100%);
+      border-bottom: 2px solid var(--border-steel);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 100;
+      position: relative;
+    }
+
+    .hud-title-zone {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-badge {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #fff;
+      text-shadow: 0 0 12px var(--accent-cyan-glow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-badge span.sub {
+      font-family: var(--font-tech);
+      font-size: 0.75rem;
+      color: var(--accent-yellow);
+      background: rgba(245, 166, 35, 0.15);
+      padding: 2px 6px;
+      border: 1px solid var(--accent-yellow);
+      letter-spacing: 1px;
+    }
+
+    .facility-status {
+      font-family: var(--font-tech);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-left: 2px solid var(--border-steel);
+      padding-left: 14px;
+      display: flex;
+      gap: 14px;
+    }
+
+    .facility-status .val {
+      color: var(--accent-cyan);
+      font-weight: bold;
+    }
+
+    .hud-menu-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .hud-btn {
+      background: #141822;
+      border: 1px solid var(--border-steel);
+      color: var(--text-main);
+      font-family: var(--font-tech);
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: 1px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hud-btn::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0; width: 3px;
+      background: var(--border-sharp);
+      transition: background 0.2s;
+    }
+
+    .hud-btn:hover {
+      background: #1c2230;
+      border-color: var(--accent-yellow);
+      color: #fff;
+      box-shadow: 0 0 10px rgba(245, 166, 35, 0.25);
+    }
+
+    .hud-btn:hover::before {
+      background: var(--accent-yellow);
+    }
+
+    /* ==========================================================================
+       SCREEN 1: LOBOTOMY FACILITY COMMAND / SECTOR SELECT & DEPLOYMENT
+       ========================================================================== */
+    #screen-lobby {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(circle at 50% 40%, #151a24 0%, #090a0f 80%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Facility Blueprint Visual Canvas */
+    #blueprint-canvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .lobby-content-grid {
+      position: relative;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      grid-template-rows: 1fr auto;
+      gap: 16px;
+      padding: 16px 20px;
+      flex: 1;
+      height: calc(100vh - 52px);
+    }
+
+    /* Left: Sector / Anomaly Containment Select */
+    .sector-selection-box {
+      background: var(--bg-panel);
+      border: 2px solid var(--border-steel);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+    }
+
+    .box-header {
+      background: #0f131a;
+      border-bottom: 2px solid var(--border-steel);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .box-header h2 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      letter-spacing: 2px;
+      color: var(--accent-yellow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .box-header .tag {
+      font-family: var(--font-tech);
+      font-size: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-sharp);
+      padding: 2px 8px;
+    }
+
+    .sectors-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sector-card {
+      background: rgba(20, 24, 34, 0.85);
+      border: 2px solid var(--border-steel);
+      padding: 14px;
+      cursor: pointer;
+      display: grid;
+      grid-template-columns: 80px 1fr auto;
+      gap: 14px;
+      align-items: center;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sector-card::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; width: 0; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.08));
+      transition: width 0.3s;
+    }
+
+    .sector-card:hover {
+      border-color: var(--accent-cyan);
+      transform: translateX(4px);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.2);
+    }
+
+    .sector-card:hover::after {
+      width: 100%;
+    }
+
+    .sector-card.selected {
+      border-color: var(--accent-yellow);
+      background: rgba(30, 36, 50, 0.95);
+      box-shadow: 0 0 20px rgba(245, 166, 35, 0.25);
+    }
+
+    .sector-card.selected::before {
+      content: 'TARGET LOCK';
+      position: absolute;
+      top: 6px; right: 8px;
+      font-size: 0.65rem;
+      color: var(--accent-yellow);
+      font-family: var(--font-tech);
+      letter-spacing: 1px;
+    }
+
+    .sector-thumb {
+      width: 76px;
+      height: 76px;
+      background: #090b10;
+      border: 1px solid var(--border-sharp);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sector-thumb svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .sector-meta h3 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .sector-meta .sub-info {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .threat-tag {
+      font-family: var(--font-tech);
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 2px;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    .threat-teth { color: #5bc0de; border: 1px solid #5bc0de; background: rgba(91, 192, 222, 0.1); }
+    .threat-he { color: var(--accent-yellow); border: 1px solid var(--accent-yellow); background: rgba(245, 166, 35, 0.1); }
+    .threat-waw { color: var(--accent-purple); border: 1px solid var(--accent-purple); background: rgba(179, 71, 255, 0.1); }
+    .threat-aleph { color: var(--accent-red); border: 1px solid var(--accent-red); background: rgba(255, 51, 75, 0.15); animation: pulseAlert 1.5s infinite; }
+
+    @keyframes pulseAlert {
+      0%, 100% { box-shadow: 0 0 5px var(--accent-red-glow); }
+      50% { box-shadow: 0 0 15px var(--accent-red); }
+    }
+
+    /* Right: Boss Intel & Anomaly Inspection Dossier */
+    .boss-dossier-box {
+      background: var(--bg-panel);
+      border: 2px solid var(--border-steel);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .boss-portrait-hero {
+      width: 100%;
+      height: 180px;
+      background: #090c12;
+      border: 2px solid var(--border-sharp);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .boss-portrait-hero svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 12px rgba(0, 0, 0, 0.8));
+    }
+
+    .boss-lore-text {
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #b0bac8;
+      border-left: 3px solid var(--accent-yellow);
+      padding-left: 12px;
+      margin-bottom: 14px;
+    }
+
+    .boss-parts-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .part-preview-pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-steel);
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.78rem;
+    }
+
+    .part-preview-pill .resist-tags span {
+      margin-left: 6px;
+      padding: 2px 5px;
+      font-size: 0.68rem;
+      font-family: var(--font-tech);
+    }
+
+    .resist-fatal { color: var(--accent-red); background: rgba(255, 51, 75, 0.15); border: 1px solid var(--accent-red); }
+    .resist-normal { color: #d8dee9; background: rgba(255, 255, 255, 0.08); }
+    .resist-ineff { color: #5bc0de; background: rgba(91, 192, 222, 0.15); border: 1px solid #5bc0de; }
+
+    /* Bottom: Agent Deployment Protocol (5 Slots) */
+    .deployment-strip {
+      grid-column: 1 / -1;
+      background: #0d1017;
+      border: 2px solid var(--border-steel);
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .deployment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .deployment-header h4 {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+      color: var(--accent-cyan);
+    }
+
+    .agent-slots-container {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr) 240px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .agent-slot-card {
+      background: #141923;
+      border: 2px solid var(--border-steel);
+      height: 108px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+      overflow: hidden;
+    }
+
+    .agent-slot-card:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+    }
+
+    .agent-slot-card.deployed {
+      border-color: var(--accent-cyan);
+      background: #18202d;
+    }
+
+    .agent-slot-card.active-inspected {
+      border-color: var(--accent-yellow);
+      box-shadow: 0 0 14px var(--accent-yellow-glow);
+    }
+
+    .agent-slot-card .stamp-badge {
+      position: absolute;
+      top: 6px; right: 6px;
+      font-size: 0.65rem;
+      font-family: var(--font-tech);
+      color: var(--accent-cyan);
+      border: 1px solid var(--accent-cyan);
+      padding: 1px 4px;
+      transform: rotate(6deg);
+    }
+
+    .slot-mini-portrait {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slot-avatar {
+      width: 44px;
+      height: 44px;
+      background: #080a0f;
+      border: 1px solid var(--border-sharp);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .slot-avatar svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .slot-info-name {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      color: #fff;
+    }
+
+    .slot-info-role {
+      font-size: 0.68rem;
+      color: var(--accent-yellow);
+    }
+
+    .slot-stats-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 4px;
+    }
+
+    /* Deploy Launch Button */
+    .launch-btn-box {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+    }
+
+    .btn-suppress {
+      width: 100%;
+      height: 80px;
+      background: linear-gradient(135deg, #bd2130 0%, #7d121c 100%);
+      border: 2px solid #ff4d61;
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      box-shadow: 0 0 20px rgba(255, 51, 75, 0.4);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      animation: pulseBtn 2s infinite;
+    }
+
+    @keyframes pulseBtn {
+      0%, 100% { border-color: #ff4d61; box-shadow: 0 0 15px rgba(255, 51, 75, 0.35); }
+      50% { border-color: #ffc107; box-shadow: 0 0 25px rgba(255, 193, 7, 0.55); }
+    }
+
+    .btn-suppress:hover {
+      transform: scale(1.02);
+      filter: brightness(1.15);
+    }
+
+    .btn-suppress span.sub {
+      font-family: var(--font-tech);
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      color: #ffd8a8;
+    }
+
+    /* Black Hole Singularity Transition Overlay */
+    #singularity-transition {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    .black-hole-vortex {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #000;
+      box-shadow: 0 0 100px 80px #00f0ff, 0 0 200px 160px #b347ff, 0 0 300px 240px #000;
+      animation: vortexSuction 1.2s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+    }
+
+    @keyframes vortexSuction {
+      0% { transform: scale(1) rotate(0deg); opacity: 0; }
+      40% { transform: scale(30) rotate(360deg); opacity: 0.9; }
+      100% { transform: scale(120) rotate(720deg); opacity: 1; background: #000; }
+    }
+
+    /* ==========================================================================
+       SCREEN 2: THE GRAVIMETRIC ARCHIVES (ARENA PERTARUNGAN BOSS FIGHT)
+       ========================================================================== */
+    #screen-battle {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      position: relative;
+      background: #07090e;
+      overflow: hidden;
+    }
+
+    /* Battle Dynamic World Canvas (Bookshelves, Floating debris, Astrolabe, Gravity FX) */
+    #arena-canvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 1;
+    }
+
+    /* Targeting Links SVG Overlay */
+    #targeting-svg {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Gravity Field Indicator Banner (Top of arena) */
+    .arena-gravity-hud {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      background: rgba(10, 13, 19, 0.92);
+      border: 2px solid var(--border-steel);
+      padding: 6px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
+    }
+
+    .grav-field-badge {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .field-zero-g { color: var(--accent-cyan); text-shadow: 0 0 10px var(--accent-cyan-glow); }
+    .field-high-g { color: var(--accent-yellow); text-shadow: 0 0 10px var(--accent-yellow-glow); }
+    .field-inverted-g { color: var(--accent-purple); text-shadow: 0 0 10px var(--accent-purple-glow); }
+    .field-hyper-density { color: var(--accent-red); text-shadow: 0 0 10px var(--accent-red-glow); }
+
+    .grav-effect-desc {
+      font-size: 0.75rem;
+      color: #c0cad8;
+      border-left: 2px solid var(--border-sharp);
+      padding-left: 12px;
+      max-width: 520px;
+    }
+
+    /* Round Counter & Graviton Resonance Pool */
+    .round-resonance-hud {
+      position: absolute;
+      top: 12px;
+      right: 20px;
+      z-index: 20;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .resonance-gauge-box {
+      background: rgba(14, 18, 26, 0.9);
+      border: 1px solid var(--border-steel);
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .res-orbs {
+      display: flex;
+      gap: 5px;
+    }
+
+    .res-orb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #1a202c;
+      border: 1px solid #4a5568;
+      transition: all 0.3s;
+    }
+
+    .res-orb.active {
+      background: var(--accent-cyan);
+      border-color: #fff;
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    /* Battle Stage Area: Boss Side & Team Side */
+    .battle-stage-workspace {
+      position: relative;
+      z-index: 15;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 70px 30px 180px 30px;
+    }
+
+    /* Boss Focused Encounter Area (Top-Middle) */
+    .boss-battle-zone {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 30px;
+      position: relative;
+    }
+
+    .boss-figure-display {
+      width: 240px;
+      height: 250px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .boss-figure-display svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.9));
+    }
+
+    .boss-status-overlay {
+      position: absolute;
+      bottom: -15px;
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid var(--accent-red);
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      color: var(--accent-red);
+      font-family: var(--font-tech);
+      letter-spacing: 1px;
+    }
+
+    /* Boss Body Parts Column / Panels */
+    .boss-parts-rack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 440px;
+    }
+
+    .boss-part-module {
+      background: rgba(14, 18, 25, 0.92);
+      border: 2px solid var(--border-steel);
+      padding: 10px 12px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .boss-part-module:hover {
+      border-color: var(--accent-yellow);
+    }
+
+    .boss-part-module.targeted {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 16px rgba(255, 51, 75, 0.35);
+    }
+
+    .boss-part-module.staggered {
+      border-color: #ff9800;
+      background: rgba(40, 25, 10, 0.92);
+      animation: staggerShake 0.4s infinite alternate;
+    }
+
+    @keyframes staggerShake {
+      0% { transform: translateX(-2px); }
+      100% { transform: translateX(2px); }
+    }
+
+    .stagger-banner {
+      position: absolute;
+      top: -8px; right: 12px;
+      background: #ff9800;
+      color: #000;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 0.7rem;
+      padding: 1px 8px;
+      letter-spacing: 2px;
+      transform: skewX(-15deg);
+      box-shadow: 0 0 10px rgba(255, 152, 0, 0.6);
+    }
+
+    .part-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .part-title-row h5 {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      color: #fff;
+    }
+
+    .part-speed-badge {
+      background: #252e3e;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: var(--font-tech);
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 1px 6px;
+    }
+
+    .gauge-wrapper {
+      position: relative;
+      height: 12px;
+      background: #11141c;
+      border: 1px solid var(--border-steel);
+      margin-bottom: 4px;
+      overflow: hidden;
+    }
+
+    .gauge-fill-hp {
+      height: 100%;
+      background: linear-gradient(90deg, #d32f2f, #f44336);
+      transition: width 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+
+    .stagger-threshold-tick {
+      position: absolute;
+      top: 0; bottom: 0; width: 3px;
+      background: #ffeb3b;
+      box-shadow: 0 0 6px #ffeb3b;
+      z-index: 5;
+    }
+
+    /* Boss Scheduled Action Pill */
+    .boss-action-pill {
+      background: rgba(25, 30, 42, 0.85);
+      border-left: 3px solid var(--accent-red);
+      padding: 6px 8px;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .boss-action-pill.nuke {
+      border-left-color: #ff0055;
+      background: rgba(60, 15, 25, 0.9);
+      animation: nukePulse 1.2s infinite alternate;
+    }
+
+    @keyframes nukePulse {
+      0% { box-shadow: inset 0 0 8px rgba(255, 0, 85, 0.2); }
+      100% { box-shadow: inset 0 0 20px rgba(255, 0, 85, 0.6); }
+    }
+
+    .action-power-coins {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-tech);
+    }
+
+    .coin-pip {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-yellow);
+      display: inline-block;
+      box-shadow: 0 0 5px var(--accent-yellow-glow);
+    }
+
+    /* Clash Prediction Indicator Between Part & Agent */
+    .clash-forecast-tag {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+
+    .forecast-dominating { color: var(--clash-dominating); border: 1px solid var(--clash-dominating); background: rgba(0, 240, 255, 0.1); }
+    .forecast-favorable { color: var(--clash-favorable); border: 1px solid var(--clash-favorable); background: rgba(59, 232, 150, 0.1); }
+    .forecast-neutral { color: var(--clash-neutral); border: 1px solid var(--clash-neutral); background: rgba(245, 166, 35, 0.1); }
+    .forecast-struggling { color: var(--clash-struggling); border: 1px solid var(--clash-struggling); background: rgba(255, 140, 51, 0.1); }
+    .forecast-hopeless { color: var(--clash-hopeless); border: 1px solid var(--clash-hopeless); background: rgba(255, 51, 75, 0.15); }
+
+    /* Player Team Slots Dashboard (Bottom Bar / Speed Ordered) */
+    .player-team-dashboard {
+      position: absolute;
+      bottom: 0; left: 0; width: 100%;
+      height: 165px;
+      background: linear-gradient(180deg, rgba(12, 15, 22, 0.85) 0%, rgba(8, 10, 15, 0.98) 100%);
+      border-top: 2px solid var(--border-steel);
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+    }
+
+    .agents-active-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      flex: 1;
+      height: 145px;
+    }
+
+    .agent-combatant-card {
+      background: rgba(18, 23, 33, 0.92);
+      border: 2px solid var(--border-steel);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .agent-combatant-card:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-4px);
+    }
+
+    .agent-combatant-card.selected-source {
+      border-color: var(--accent-yellow);
+      box-shadow: 0 0 16px var(--accent-yellow-glow);
+    }
+
+    .agent-combatant-card.staggered-agent {
+      filter: grayscale(0.8) brightness(0.6);
+      border-color: var(--accent-red);
+    }
+
+    .combatant-top-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .combatant-name {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .combatant-speed-pill {
+      background: #0d121c;
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: var(--font-tech);
+      font-size: 0.72rem;
+      padding: 1px 5px;
+    }
+
+    .combatant-portrait-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .combatant-mini-art {
+      width: 42px;
+      height: 42px;
+      background: #090c12;
+      border: 1px solid var(--border-sharp);
+      overflow: hidden;
+    }
+
+    .combatant-mini-art svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .combatant-vitals {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .vital-bar {
+      height: 8px;
+      background: #0f131a;
+      border: 1px solid var(--border-steel);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .vital-hp-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2e7d32, #4caf50);
+      transition: width 0.25s;
+    }
+
+    .vital-sp-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1565c0, #2196f3);
+      transition: width 0.25s;
+    }
+
+    /* Skills Deck / Slot Selector */
+    .combatant-skills-deck {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .skill-slot-token {
+      flex: 1;
+      background: #111520;
+      border: 1px solid var(--border-sharp);
+      padding: 4px 2px;
+      text-align: center;
+      font-size: 0.65rem;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      position: relative;
+    }
+
+    .skill-slot-token:hover {
+      background: #202738;
+      border-color: var(--accent-yellow);
+      color: #fff;
+    }
+
+    .skill-slot-token.active-chosen {
+      background: #252f44;
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-weight: bold;
+    }
+
+    .skill-slot-token.ultimate-token {
+      border-color: var(--accent-purple);
+      color: var(--accent-purple);
+      background: rgba(179, 71, 255, 0.1);
+    }
+
+    .skill-slot-token.ultimate-token.ready {
+      animation: pulseUlt 1.2s infinite alternate;
+    }
+
+    @keyframes pulseUlt {
+      0% { box-shadow: 0 0 5px var(--accent-purple-glow); }
+      100% { box-shadow: 0 0 12px var(--accent-purple); }
+    }
+
+    /* Execute / Clash Control Station */
+    .clash-engine-controls {
+      width: 170px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn-engage-clash {
+      height: 72px;
+      background: linear-gradient(135deg, #f5a623 0%, #d48806 100%);
+      border: 2px solid #ffd591;
+      color: #0b0d13;
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 18px rgba(245, 166, 35, 0.4);
+      transition: all 0.2s;
+    }
+
+    .btn-engage-clash:hover {
+      transform: scale(1.03);
+      filter: brightness(1.1);
+    }
+
+    .btn-engage-clash:disabled {
+      filter: grayscale(1) opacity(0.5);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-auto-target {
+      background: #18202d;
+      border: 1px solid var(--border-steel);
+      color: var(--text-main);
+      font-family: var(--font-tech);
+      font-size: 0.72rem;
+      padding: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-auto-target:hover {
+      border-color: var(--accent-cyan);
+      color: #fff;
+    }
+
+    /* ==========================================================================
+       DRAMATIC CINEMATIC CLASH OVERLAY (PROJECT MOON / LIMBUS STYLE)
+       ========================================================================== */
+    #clash-cinematic-modal {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 500;
+      background: rgba(5, 7, 10, 0.88);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Diagonal Slash Banners */
+    .clash-stage-container {
+      width: 90%;
+      max-width: 980px;
+      height: 380px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      overflow: hidden;
+      border-top: 3px solid var(--accent-yellow);
+      border-bottom: 3px solid var(--accent-yellow);
+      background: radial-gradient(circle at 50% 50%, rgba(30, 20, 25, 0.6) 0%, rgba(5, 7, 10, 0.95) 75%);
+    }
+
+    .clash-side {
+      width: 38%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .clash-side.player-side {
+      align-items: flex-start;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .clash-side.enemy-side {
+      align-items: flex-end;
+      text-align: right;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .clash-name-tag {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .clash-skill-name {
+      font-size: 0.9rem;
+      color: var(--accent-yellow);
+      margin-bottom: 12px;
+    }
+
+    .clash-coins-rack {
+      display: flex;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .clash-coin {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #1c2333;
+      border: 2px solid var(--border-sharp);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-tech);
+      font-weight: 900;
+      font-size: 0.9rem;
+      color: #718096;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .clash-coin.heads {
+      background: linear-gradient(135deg, #f5a623, #ffc107);
+      border-color: #fff;
+      color: #000;
+      box-shadow: 0 0 15px var(--accent-yellow);
+      transform: scale(1.15) rotateY(360deg);
+    }
+
+    .clash-coin.tails {
+      background: #2d3748;
+      border-color: #4a5568;
+      color: #a0aec0;
+      transform: scale(0.9);
+    }
+
+    .clash-coin.broken {
+      filter: grayscale(1) opacity(0.3);
+      border-style: dashed;
+      transform: scale(0.8);
+    }
+
+    .clash-current-power {
+      font-family: var(--font-display);
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 18px rgba(255, 255, 255, 0.4);
+    }
+
+    /* Central Clash Spark Vortex */
+    .clash-center-nexus {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+
+    .clash-versus-badge {
+      font-family: var(--font-display);
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--accent-red);
+      text-shadow: 0 0 20px var(--accent-red);
+      letter-spacing: 4px;
+      animation: vsPulse 0.6s infinite alternate;
+    }
+
+    @keyframes vsPulse {
+      0% { transform: scale(0.95); }
+      100% { transform: scale(1.1); }
+    }
+
+    .clash-spark-fx {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      pointer-events: none;
+    }
+
+    .clash-round-log {
+      margin-top: 14px;
+      font-family: var(--font-tech);
+      font-size: 0.85rem;
+      color: var(--accent-cyan);
+      background: rgba(0, 0, 0, 0.6);
+      padding: 4px 12px;
+      border: 1px solid var(--border-steel);
+    }
+
+    /* Hit Impact & Floating Damage Popups */
+    .damage-floater {
+      position: absolute;
+      font-family: var(--font-display);
+      font-weight: 900;
+      font-size: 1.8rem;
+      pointer-events: none;
+      z-index: 600;
+      animation: damageFloat 0.9s ease-out forwards;
+    }
+
+    @keyframes damageFloat {
+      0% { transform: translateY(0) scale(0.5); opacity: 0; }
+      20% { transform: translateY(-20px) scale(1.2); opacity: 1; }
+      80% { transform: translateY(-40px) scale(1); opacity: 1; }
+      100% { transform: translateY(-60px) scale(0.8); opacity: 0; }
+    }
+
+    .dmg-slash { color: #ff334b; text-shadow: 0 0 10px #ff334b; }
+    .dmg-pierce { color: #f5a623; text-shadow: 0 0 10px #f5a623; }
+    .dmg-blunt { color: #00f0ff; text-shadow: 0 0 10px #00f0ff; }
+    .dmg-stagger { color: #ffeb3b; text-shadow: 0 0 15px #ffeb3b; font-size: 2.2rem; }
+
+    /* ==========================================================================
+       MODALS: ARCHIVE / RESONANCE LOG / SYSTEM OVERRIDE
+       ========================================================================== */
+    .generic-modal {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(6, 8, 12, 0.88);
+      z-index: 800;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-dialog-panel {
+      width: 720px;
+      max-height: 85vh;
+      background: var(--bg-panel-solid);
+      border: 2px solid var(--border-steel);
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      background: #111520;
+      border-bottom: 2px solid var(--border-steel);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+      color: var(--accent-yellow);
+    }
+
+    .btn-close-modal {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.3rem;
+      cursor: pointer;
+    }
+
+    .btn-close-modal:hover {
+      color: var(--accent-red);
+    }
+
+    .modal-body-scroll {
+      padding: 18px;
+      overflow-y: auto;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: #b0bac8;
+    }
+
+    .modal-body-scroll h4 {
+      font-family: var(--font-display);
+      color: #fff;
+      margin: 12px 0 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 4px;
+    }
+
+    /* Speech / Bark Bubble */
+    .speech-bark-bubble {
+      position: absolute;
+      background: rgba(14, 18, 25, 0.95);
+      border: 2px solid var(--accent-yellow);
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      padding: 6px 12px;
+      pointer-events: none;
+      z-index: 300;
+      max-width: 240px;
+      box-shadow: 0 0 12px rgba(245, 166, 35, 0.3);
+      animation: barkFade 2.5s forwards;
+    }
+
+    @keyframes barkFade {
+      0% { opacity: 0; transform: translateY(6px); }
+      15% { opacity: 1; transform: translateY(0); }
+      80% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-8px); }
+    }
+
+    /* Victory / Defeat Modal */
+    #endgame-modal {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(5, 7, 10, 0.95);
+      z-index: 900;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .endgame-title {
+      font-family: var(--font-display);
+      font-size: 3.5rem;
+      font-weight: 900;
+      letter-spacing: 6px;
+      margin-bottom: 14px;
+    }
+
+    .title-victory { color: var(--accent-cyan); text-shadow: 0 0 30px var(--accent-cyan); }
+    .title-defeat { color: var(--accent-red); text-shadow: 0 0 30px var(--accent-red); }
+
+    .endgame-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .btn-return-lobby {
+      background: #161c28;
+      border: 2px solid var(--accent-yellow);
+      color: var(--accent-yellow);
+      font-family: var(--font-display);
+      font-size: 1rem;
+      padding: 10px 28px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: all 0.2s;
+    }
+
+    .btn-return-lobby:hover {
+      background: var(--accent-yellow);
+      color: #000;
+      box-shadow: 0 0 20px var(--accent-yellow);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Retro Screen Scanlines & Vignette -->
+  <div class="crt-overlay"></div>
+  <div class="vignette-overlay"></div>
+
+  <div id="app-container">
+
+    <!-- GLOBAL TOP HUD (LOBOTOMY CORP / LIMBUS STYLE) -->
+    <header class="global-hud">
+      <div class="hud-title-zone">
+        <div class="logo-badge">
+          POST-GRAVITY <span class="sub">REV-4.0</span>
+        </div>
+        <div class="facility-status">
+          <div>SECTOR: <span class="val" id="hud-sector-name">SECTOR-01</span></div>
+          <div>GRAV-CORE: <span class="val" id="hud-grav-rate">98.4% STABLE</span></div>
+          <div>THREAT: <span class="val" id="hud-threat-code">WAW-04</span></div>
+        </div>
+      </div>
+
+      <div class="hud-menu-actions">
+        <button class="hud-btn" id="btn-open-archive">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          ARCHIVE / E.G.O
+        </button>
+        <button class="hud-btn" id="btn-open-logs">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          RESONANCE LOG
+        </button>
+        <button class="hud-btn" id="btn-open-override">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          SYSTEM OVERRIDE
+        </button>
+      </div>
+    </header>
+
+    <!-- ====================================================================
+         SCREEN 1: FACILITY COMMAND / STAGE SELECTION & TEAM DEPLOYMENT
+         ==================================================================== -->
+    <main id="screen-lobby">
+      <canvas id="blueprint-canvas"></canvas>
+
+      <div class="lobby-content-grid">
+        <!-- Left: Sector Selection List -->
+        <section class="sector-selection-box">
+          <div class="box-header">
+            <h2>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+              CONTAINMENT CHAMBER SECTORS
+            </h2>
+            <span class="tag">ANOMALY INDEX 4/4</span>
+          </div>
+
+          <div class="sectors-list" id="sectors-container">
+            <!-- Rendered dynamically -->
+          </div>
+        </section>
+
+        <!-- Right: Selected Boss Dossier -->
+        <section class="boss-dossier-box" id="boss-dossier-panel">
+          <!-- Rendered dynamically -->
+        </section>
+
+        <!-- Bottom: Agent Deployment Protocol -->
+        <section class="deployment-strip">
+          <div class="deployment-header">
+            <h4>AGENT DEPLOYMENT PROTOCOL (TASK FORCE 5)</h4>
+            <span style="font-family: var(--font-tech); font-size: 0.75rem; color: var(--text-muted);">
+              SANITY LINK: <strong style="color: var(--accent-cyan);">SYNCED (45 SP MAX)</strong>
+            </span>
+          </div>
+
+          <div class="agent-slots-container">
+            <div id="roster-slots-grid" style="display: contents;">
+              <!-- 5 Agent Cards rendered here -->
+            </div>
+
+            <!-- Initiate Suppression Button -->
+            <div class="launch-btn-box">
+              <button class="btn-suppress" id="btn-initiate-suppression">
+                <div>INITIATE SUPPRESSION</div>
+                <span class="sub">ENGAGE GRAVITATIONAL ARCHIVES</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Black Hole Singularity Visual Transition Overlay -->
+    <div id="singularity-transition">
+      <div class="black-hole-vortex"></div>
+    </div>
+
+    <!-- ====================================================================
+         SCREEN 2: THE GRAVIMETRIC ARCHIVES (ARENA PERTARUNGAN BOSS FIGHT)
+         ==================================================================== -->
+    <main id="screen-battle">
+      <!-- 2D Canvas for dynamic Library of Ruina background + Gravity physics -->
+      <canvas id="arena-canvas"></canvas>
+
+      <!-- SVG Layer for drawing dynamic clash / target connection lines -->
+      <svg id="targeting-svg"></svg>
+
+      <!-- Top Banner: Gravity Field Dynamics -->
+      <div class="arena-gravity-hud">
+        <div class="grav-field-badge" id="grav-field-label">
+          <span id="grav-icon">●</span> <span id="grav-name">ZERO-G FIELD</span>
+        </div>
+        <div class="grav-effect-desc" id="grav-desc-text">
+          Zero-G: Meningkatkan koin kelincahan & kecepatan; Physical defense menurun drastis.
+        </div>
+      </div>
+
+      <!-- Round & Graviton Resonance Pool -->
+      <div class="round-resonance-hud">
+        <div class="resonance-gauge-box">
+          <span style="font-family: var(--font-tech); font-size: 0.75rem; color: var(--accent-yellow);">ROUND: <strong id="hud-round-number" style="color: #fff;">1</strong></span>
+        </div>
+        <div class="resonance-gauge-box">
+          <span style="font-family: var(--font-tech); font-size: 0.72rem; color: var(--accent-cyan);">GRAVITON RESONANCE:</span>
+          <div class="res-orbs" id="resonance-orbs-container">
+            <!-- 5 Res orbs -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Focused Encounter Workspace -->
+      <div class="battle-stage-workspace">
+        <!-- Boss Figure & Multi-Part Target Modules -->
+        <div class="boss-battle-zone">
+          <div class="boss-figure-display" id="boss-sprite-anchor">
+            <!-- SVG Boss Graphic -->
+            <div class="boss-status-overlay" id="boss-stance-text">VANGUARD STANCE</div>
+          </div>
+
+          <div class="boss-parts-rack" id="boss-parts-container">
+            <!-- Boss body parts with HP, Stagger bar, Scheduled skill slots -->
+          </div>
+        </div>
+
+        <!-- Floating Dialog / Speech Bark Anchor -->
+        <div id="bark-anchor-zone" style="position: absolute; top: 120px; left: 60px; pointer-events: none;"></div>
+      </div>
+
+      <!-- Player Team Command Dashboard (Bottom Bar) -->
+      <div class="player-team-dashboard">
+        <div class="agents-active-row" id="battle-agents-container">
+          <!-- 5 Combatant Cards with speed, vitals, and 3 skills + ultimate -->
+        </div>
+
+        <div class="clash-engine-controls">
+          <button class="btn-engage-clash" id="btn-start-combat">
+            <span>ENGAGE</span>
+            <small style="font-size: 0.65rem; font-family: var(--font-tech); font-weight: normal;">COMMENCE CLASH</small>
+          </button>
+          <button class="btn-auto-target" id="btn-auto-assign">AUTO-TARGET OPTIMAL</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ====================================================================
+         CLASH CINEMATIC MODAL (PROJECT MOON / LIMBUS STYLE)
+         ==================================================================== -->
+    <div id="clash-cinematic-modal">
+      <div class="clash-stage-container">
+        <!-- Left: Player Combatant -->
+        <div class="clash-side player-side">
+          <div class="clash-name-tag" id="clash-agent-name">AGENT VANE</div>
+          <div class="clash-skill-name" id="clash-agent-skill">DENSITY ANCHOR</div>
+          <div class="clash-coins-rack" id="clash-agent-coins">
+            <!-- Coin nodes -->
+          </div>
+          <div class="clash-current-power" id="clash-agent-power">14</div>
+        </div>
+
+        <!-- Center: Clash Spark & Result -->
+        <div class="clash-center-nexus">
+          <div class="clash-versus-badge" id="clash-versus-label">CLASH!</div>
+          <canvas class="clash-spark-fx" id="clash-spark-canvas" width="160" height="160"></canvas>
+          <div class="clash-round-log" id="clash-feedback-log">CLASH ROUND 1</div>
+        </div>
+
+        <!-- Right: Enemy / Boss Part -->
+        <div class="clash-side enemy-side">
+          <div class="clash-name-tag" id="clash-enemy-name">GRAVITY SLEDGE</div>
+          <div class="clash-skill-name" id="clash-enemy-skill">KAPTEN GRAVITASI</div>
+          <div class="clash-coins-rack" id="clash-enemy-coins">
+            <!-- Coin nodes -->
+          </div>
+          <div class="clash-current-power" id="clash-enemy-power">12</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         ENDGAME MODAL (VICTORY / DEFEAT)
+         ==================================================================== -->
+    <div id="endgame-modal">
+      <h1 class="endgame-title title-victory" id="endgame-headline">SUPPRESSION COMPLETE</h1>
+      <p class="endgame-subtitle" id="endgame-subtext">The Gravimetric Archives anomaly has been neutralized.</p>
+      <button class="btn-return-lobby" id="btn-endgame-return">RETURN TO FACILITY</button>
+    </div>
+
+    <!-- ====================================================================
+         GENERIC MODALS: ARCHIVE / RESONANCE LOG / SYSTEM OVERRIDE
+         ==================================================================== -->
+    <!-- Archive Modal -->
+    <div class="generic-modal" id="modal-archive">
+      <div class="modal-dialog-panel">
+        <div class="modal-header">
+          <h3>GRAVIMETRIC ARCHIVES // CODEX & E.G.O</h3>
+          <button class="btn-close-modal" onclick="closeAllModals()">&times;</button>
+        </div>
+        <div class="modal-body-scroll">
+          <h4>THE GRAVIMETRIC ARCHIVES</h4>
+          <p>Fasilitas arsip terlarang peninggalan riset manipulasi massa. Menampung jutaan manuskrip kuno bersepuh emas di antara rak-rak kayu mahoni setinggi puluhan meter. Anomali Singularitas Gravitasi membelah ruang ini menjadi medan tanpa bobot, di mana buku, tangga spiral, dan pilar berputar mengitari Inti Astrolabe Emas raksasa.</p>
+          
+          <h4>GRAVITY FIELD LEVELS</h4>
+          <p><strong>Zero-G:</strong> Koin keterampilan lincah bertambah, kalkulasi Speed meningkat, namun Physical Defense menurun tajam.</p>
+          <p><strong>High-G:</strong> Menambah beban koin, meningkatkan Base Power serangan tipe Blunt, tetapi mengurangi nilai Speed dan probabilitas koin positif.</p>
+          <p><strong>Inverted-G:</strong> Memutarbalikkan hukum benturan (Clash Hierarchy). Nilai Power TERKECIL memiliki keunggulan atas nilai Power tinggi!</p>
+          <p><strong>Hyper-Density:</strong> Tekanan gravimetrik ekstrem menekan pertahanan musuh, menyebabkan kerusakan stagger berlipat ganda.</p>
+
+          <h4>E.G.O & GRAV-EQUIPMENT PROTOCOLS</h4>
+          <p>Perlengkapan E.G.O gravitasi mengonversi Graviton Resonance menjadi serangan pemungkas berdaya hancur tinggi. Gunakan Ultimate Skills untuk membatalkan serangan Nuke Boss sebelum fase kolaps terjadi!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resonance Log Modal -->
+    <div class="generic-modal" id="modal-logs">
+      <div class="modal-dialog-panel">
+        <div class="modal-header">
+          <h3>TACTICAL COMBAT // RESONANCE LOG</h3>
+          <button class="btn-close-modal" onclick="closeAllModals()">&times;</button>
+        </div>
+        <div class="modal-body-scroll" id="combat-log-body">
+          <p style="color: var(--text-muted);">[SYSTEM READY] No battle logs recorded yet. Initiate Suppression to generate operational logs.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Override Modal -->
+    <div class="generic-modal" id="modal-override">
+      <div class="modal-dialog-panel">
+        <div class="modal-header">
+          <h3>SYSTEM OVERRIDE // CONFIGURATION</h3>
+          <button class="btn-close-modal" onclick="closeAllModals()">&times;</button>
+        </div>
+        <div class="modal-body-scroll">
+          <h4>AUDIO SYNTHESIS ENGINE (WEB AUDIO API)</h4>
+          <p>Semua efek suara pertarungan, dentung koin benturan, bass hum generator gravitasi, dan ledakan disintesis secara dinamis langsung melalui Web Audio API.</p>
+          <div style="margin: 12px 0;">
+            <label style="display:flex; align-items:center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="chk-audio-toggle" checked> Aktifkan Audio Sintesis (Ambient Hum, Metal Clash, Coin Clinks)
+            </label>
+          </div>
+
+          <h4>COMBAT PACING</h4>
+          <div style="margin: 12px 0;">
+            <label style="display:flex; align-items:center; gap: 10px;">
+              Kecepatan Animasi Pertarungan:
+              <select id="sel-battle-speed" style="background:#141923; color:#fff; border:1px solid var(--border-sharp); padding:4px 8px;">
+                <option value="1">1.0x (Cinematic Standard)</option>
+                <option value="1.5" selected>1.5x (Tactical Fluid)</option>
+                <option value="2.2">2.2x (Hyper Speed)</option>
+              </select>
+            </label>
+          </div>
+
+          <h4>GRAVITY FIELD FORCE SWITCH (DEBUG / SIMULATION)</h4>
+          <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button class="hud-btn" onclick="forceSetGravityField('zero_g')">Force Zero-G</button>
+            <button class="hud-btn" onclick="forceSetGravityField('high_g')">Force High-G</button>
+            <button class="hud-btn" onclick="forceSetGravityField('inverted_g')">Force Inverted-G</button>
+            <button class="hud-btn" onclick="forceSetGravityField('hyper_density')">Force Hyper-Density</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ====================================================================
+       GAME ENGINE SCRIPT (DATA, AUDIO SYNTH, CANVAS PHYSICS, CLASH SYSTEM)
+       ==================================================================== -->
+  <script>
+    /* ==========================================================================
+       1. SOUND SYNTHESIS ENGINE (PROCEDURAL WEB AUDIO API)
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.ambientOsc = null;
+        this.ambientGain = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+          this.startAmbientHum();
+        } else if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      startAmbientHum() {
+        if (!this.ctx || !this.enabled) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(52, this.ctx.currentTime); // Low 52Hz rumble
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(140, this.ctx.currentTime);
+
+          gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start();
+          this.ambientOsc = osc;
+          this.ambientGain = gain;
+        } catch (e) {
+          console.warn("Audio context not allowed yet:", e);
+        }
+      }
+
+      playMetalClick() {
+        if (!this.ctx || !this.enabled) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.05);
+
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.06);
+      }
+
+      playStamp() {
+        if (!this.ctx || !this.enabled) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.18);
+
+        gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.22);
+      }
+
+      playCoinFlip() {
+        if (!this.ctx || !this.enabled) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        const now = this.ctx.currentTime;
+        osc.frequency.setValueAtTime(1600, now);
+        osc.frequency.exponentialRampToValueAtTime(2400, now + 0.06);
+        osc.frequency.exponentialRampToValueAtTime(1900, now + 0.12);
+
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      }
+
+      playClashImpact() {
+        if (!this.ctx || !this.enabled) return;
+        const now = this.ctx.currentTime;
+        // Low metal punch
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.25);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.32);
+
+        // High spark chime
+        const spark = this.ctx.createOscillator();
+        const sparkGain = this.ctx.createGain();
+        spark.type = 'sawtooth';
+        spark.frequency.setValueAtTime(1800, now);
+        spark.frequency.exponentialRampToValueAtTime(3200, now + 0.15);
+        sparkGain.gain.setValueAtTime(0.25, now);
+        sparkGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        spark.connect(sparkGain);
+        sparkGain.connect(this.ctx.destination);
+        spark.start(now);
+        spark.stop(now + 0.22);
+      }
+
+      playSlashHit() {
+        if (!this.ctx || !this.enabled) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(950, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + 0.18);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.23);
+      }
+
+      playStaggerShatter() {
+        if (!this.ctx || !this.enabled) return;
+        const now = this.ctx.currentTime;
+        // Glass break simulation with randomized frequencies
+        for (let i = 0; i < 4; i++) {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(1200 + i * 400, now);
+          osc.frequency.exponentialRampToValueAtTime(300, now + 0.35 + i * 0.05);
+
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4 + i * 0.05);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.03);
+          osc.stop(now + 0.45);
+        }
+      }
+
+      playBlackHoleWhoosh() {
+        if (!this.ctx || !this.enabled) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(80, now);
+        osc.frequency.exponentialRampToValueAtTime(550, now + 0.6);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 1.2);
+
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.5, now + 0.6);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 1.25);
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    /* ==========================================================================
+       2. DATABASE: AGENTS (PLAYABLE CHARACTERS) & BOSSES (ENEMIES)
+       ========================================================================== */
+    const AGENTS_DATABASE = [
+      {
+        id: 'vane',
+        name: 'Vane',
+        title: 'The Grav-Mass Titan',
+        role: 'Tank / Crowd Control',
+        speedMin: 2,
+        speedMax: 5,
+        maxHp: 240,
+        hp: 240,
+        sanity: 0, // -45 to +45
+        resistances: { slash: 1.0, pierce: 0.5, blunt: 0.5 },
+        deployed: true,
+        skills: [
+          {
+            id: 'density_anchor',
+            name: 'Density Anchor',
+            type: 'Blunt',
+            basePower: 4,
+            coinCount: 2,
+            coinVal: 4,
+            desc: 'Hantaman tameng yang memicu Defense Power Up dan Taunt.',
+            affinity: 'Gloom'
+          },
+          {
+            id: 'gravimetric_bunker',
+            name: 'Gravimetric Bunker',
+            type: 'Blunt',
+            basePower: 6,
+            coinCount: 2,
+            coinVal: 5,
+            desc: 'Menancapkan tameng, memberi Shield tim dan mengubah arena jadi High-G.',
+            fieldChange: 'high_g',
+            affinity: 'Sloth'
+          },
+          {
+            id: 'singularity_fortress',
+            name: 'Singularity Fortress',
+            type: 'Blunt',
+            isUltimate: true,
+            resonanceCost: 3,
+            basePower: 12,
+            coinCount: 3,
+            coinVal: 6,
+            desc: '[ULTIMATE] Miniatur lubang hitam membatalkan Skill Bos dan massive Stagger.',
+            affinity: 'Pride'
+          }
+        ],
+        svgAvatar: `<svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="46" fill="#181410" stroke="#f5a623" stroke-width="4"/>
+          <!-- Heavy Shield silhouette -->
+          <path d="M30 25 L70 25 L76 70 L50 88 L24 70 Z" fill="#2d2218" stroke="#f5a623" stroke-width="3"/>
+          <path d="M40 35 L60 35 L64 65 L50 78 L36 65 Z" fill="#e5b869" opacity="0.4"/>
+          <line x1="50" y1="30" x2="50" y2="82" stroke="#fff" stroke-width="2"/>
+          <line x1="32" y1="50" x2="68" y2="50" stroke="#fff" stroke-width="2"/>
+        </svg>`
+      },
+      {
+        id: 'kira',
+        name: 'Kira',
+        title: 'Void-Scythe Operative',
+        role: 'Burst DPS / Executioner',
+        speedMin: 4,
+        speedMax: 7,
+        maxHp: 160,
+        hp: 160,
+        sanity: 5,
+        resistances: { slash: 0.5, pierce: 1.0, blunt: 2.0 },
+        deployed: true,
+        skills: [
+          {
+            id: 'grav_rift_slash',
+            name: 'Grav-Rift Slash',
+            type: 'Slash',
+            basePower: 5,
+            coinCount: 3,
+            coinVal: 3,
+            desc: 'Tebasan sabit berenergi retakan ungu-hitam memicu Bleed.',
+            affinity: 'Envy'
+          },
+          {
+            id: 'zero_g_slipstream',
+            name: 'Zero-G Slipstream',
+            type: 'Slash',
+            basePower: 4,
+            coinCount: 4,
+            coinVal: 3,
+            desc: 'Meluncur instan ke belakang musuh untuk tebasan silang eksploitasi Stagger.',
+            fieldChange: 'zero_g',
+            affinity: 'Lust'
+          },
+          {
+            id: 'event_horizon_reaping',
+            name: 'Event Horizon Reaping',
+            type: 'Slash',
+            isUltimate: true,
+            resonanceCost: 3,
+            basePower: 14,
+            coinCount: 3,
+            coinVal: 7,
+            desc: '[ULTIMATE] Critical Slash masif (+50% damage pada musuh Stagger).',
+            affinity: 'Wrath'
+          }
+        ],
+        svgAvatar: `<svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="46" fill="#140f1a" stroke="#b347ff" stroke-width="4"/>
+          <!-- Curved Scythe Blade -->
+          <path d="M30 75 Q40 40 70 25 Q55 20 40 32 Q25 45 28 80 Z" fill="#b347ff" stroke="#fff" stroke-width="2"/>
+          <line x1="28" y1="80" x2="75" y2="25" stroke="#7e8b9b" stroke-width="4"/>
+          <circle cx="55" cy="45" r="4" fill="#00f0ff"/>
+        </svg>`
+      },
+      {
+        id: 'orion',
+        name: 'Orion',
+        title: 'Singularity Gunslinger',
+        role: 'Ranged Sub-DPS / Debuffer',
+        speedMin: 3,
+        speedMax: 6,
+        maxHp: 180,
+        hp: 180,
+        sanity: 0,
+        resistances: { slash: 1.0, pierce: 0.5, blunt: 1.0 },
+        deployed: true,
+        skills: [
+          {
+            id: 'repulsion_shot',
+            name: 'Repulsion Shot',
+            type: 'Pierce',
+            basePower: 4,
+            coinCount: 2,
+            coinVal: 4,
+            desc: 'Tembakan biru-emas mengurangi Base Power serangan musuh sebesar 2.',
+            affinity: 'Gluttony'
+          },
+          {
+            id: 'orbit_cascade',
+            name: 'Orbit Cascade',
+            type: 'Pierce',
+            basePower: 5,
+            coinCount: 3,
+            coinVal: 3,
+            desc: 'Peluru beruntun mengurung musuh, memberi Graviton Resonance ekstra.',
+            affinity: 'Gloom'
+          },
+          {
+            id: 'compression_collapse',
+            name: 'Compression Collapse',
+            type: 'Pierce',
+            isUltimate: true,
+            resonanceCost: 3,
+            basePower: 11,
+            coinCount: 4,
+            coinVal: 5,
+            desc: '[ULTIMATE] Menggabungkan pistol jadi senapan, memberi Fragile & ubah arena ke Inverted-G.',
+            fieldChange: 'inverted_g',
+            affinity: 'Pride'
+          }
+        ],
+        svgAvatar: `<svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="46" fill="#0c1820" stroke="#00f0ff" stroke-width="4"/>
+          <!-- Dual Revolvers crossed -->
+          <line x1="25" y1="75" x2="65" y2="35" stroke="#00f0ff" stroke-width="5" stroke-linecap="round"/>
+          <line x1="75" y1="75" x2="35" y2="35" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="50" cy="50" r="10" fill="none" stroke="#f5a623" stroke-width="3"/>
+          <line x1="50" y1="40" x2="50" y2="60" stroke="#f5a623" stroke-width="2"/>
+        </svg>`
+      },
+      {
+        id: 'lyra',
+        name: 'Lyra',
+        title: 'Grav-Pulse Harmonizer',
+        role: 'Support / Buffer / Healer',
+        speedMin: 3,
+        speedMax: 6,
+        maxHp: 150,
+        hp: 150,
+        sanity: 10,
+        resistances: { slash: 1.0, pierce: 2.0, blunt: 0.5 },
+        deployed: true,
+        skills: [
+          {
+            id: 'pulse_stabilization',
+            name: 'Pulse Stabilization',
+            type: 'Pierce',
+            basePower: 4,
+            coinCount: 2,
+            coinVal: 3,
+            desc: 'Gelombang hijau memulihkan Sanity (+15) dan menghapus 1 debuff negatif.',
+            affinity: 'Sloth'
+          },
+          {
+            id: 'vector_alignment',
+            name: 'Vector Alignment',
+            type: 'Blunt',
+            basePower: 5,
+            coinCount: 2,
+            coinVal: 4,
+            desc: 'Manipulasi vektor kaki sekutu, memberikan Speed Up dan Coin Power Up.',
+            affinity: 'Lust'
+          },
+          {
+            id: 'resonance_symphony',
+            name: 'Resonance Symphony',
+            type: 'Pierce',
+            isUltimate: true,
+            resonanceCost: 3,
+            basePower: 10,
+            coinCount: 3,
+            coinVal: 4,
+            desc: '[ULTIMATE] Pulihkan HP tim (+40 HP), beri Shield darurat & isi pool Resonance.',
+            affinity: 'Gloom'
+          }
+        ],
+        svgAvatar: `<svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="46" fill="#101e18" stroke="#3be896" stroke-width="4"/>
+          <!-- Mechanical wings & Grav-Orb -->
+          <path d="M25 50 Q40 30 50 50 Q60 30 75 50" fill="none" stroke="#3be896" stroke-width="3"/>
+          <circle cx="50" cy="45" r="14" fill="#0c1813" stroke="#fff" stroke-width="2"/>
+          <circle cx="50" cy="45" r="7" fill="#3be896" opacity="0.8"/>
+        </svg>`
+      },
+      {
+        id: 'zane',
+        name: 'Zane',
+        title: 'Spatial Distortion Catalyst',
+        role: 'Disrupter / Chain-Combo',
+        speedMin: 3,
+        speedMax: 7,
+        maxHp: 190,
+        hp: 190,
+        sanity: 0,
+        resistances: { slash: 0.5, pierce: 1.0, blunt: 1.0 },
+        deployed: true,
+        skills: [
+          {
+            id: 'spatial_flick',
+            name: 'Spatial Flick',
+            type: 'Blunt',
+            basePower: 5,
+            coinCount: 2,
+            coinVal: 4,
+            desc: 'Tinju melintasi celah ruang yang mengacak nilai Speed Skill Slot bos.',
+            affinity: 'Wrath'
+          },
+          {
+            id: 'inversion_upper',
+            name: 'Inversion Upper',
+            type: 'Blunt',
+            basePower: 4,
+            coinCount: 3,
+            coinVal: 4,
+            desc: 'Uppercut cyan melempar musuh, beri Stagger Count & Gravity Sickness.',
+            fieldChange: 'hyper_density',
+            affinity: 'Envy'
+          },
+          {
+            id: 'cataclysmic_chain',
+            name: 'Cataclysmic Chain',
+            type: 'Blunt',
+            isUltimate: true,
+            resonanceCost: 3,
+            basePower: 12,
+            coinCount: 4,
+            coinVal: 5,
+            desc: '[ULTIMATE] Kombo tinju gravitasi cepat; jika semua koin positif, BATALKAN Nuke bos & paksa Stagger total!',
+            affinity: 'Wrath'
+          }
+        ],
+        svgAvatar: `<svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="46" fill="#1f1418" stroke="#ff334b" stroke-width="4"/>
+          <!-- Giant Brawler Gauntlet -->
+          <rect x="35" y="35" width="30" height="35" rx="6" fill="#2d1b22" stroke="#ff334b" stroke-width="3"/>
+          <circle cx="50" cy="52" r="8" fill="#00f0ff"/>
+          <line x1="42" y1="35" x2="42" y2="22" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+          <line x1="50" y1="35" x2="50" y2="18" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+          <line x1="58" y1="35" x2="58" y2="22" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        </svg>`
+      }
+    ];
+
+    const BOSSES_DATABASE = [
+      {
+        id: 'vanguard',
+        name: 'Kapten Gravitasi Vanguard',
+        subtitle: 'Inspirasi: Lei Heng (Vanguard Titan)',
+        threat: 'HE',
+        threatCode: 'HE-07',
+        sectorName: 'SECTOR-01: VANGUARD FORGE',
+        lore: 'Prajurit kekar berzirah militer biru tua dengan ornamen kuning-perak. Mengenakan helm visor bercahaya dan generator elektromagnetik bersayap di punggungnya. Palu perang elektromagnetik raksasanya mampu membengkokkan gravitasi arena secara sepihak.',
+        stanceText: 'ELECTROMAGNETIC HAMMER ARMED',
+        initialField: 'high_g',
+        parts: [
+          {
+            id: 'vanguard_core',
+            name: 'Vanguard Titan Body',
+            maxHp: 480,
+            hp: 480,
+            staggerThreshold: 200,
+            isStaggered: false,
+            resistances: { slash: 1.0, pierce: 0.5, blunt: 1.5 },
+            speedMin: 3,
+            speedMax: 6,
+            skills: [
+              {
+                id: 'gravity_sledge',
+                name: 'Gravity Sledge',
+                type: 'Blunt',
+                basePower: 6,
+                coinCount: 2,
+                coinVal: 5,
+                desc: 'Mengayunkan palu ke lantai, memicu gelombang kejut dan Gravity Sickness.',
+                isNuke: false
+              },
+              {
+                id: 'gravitational_collapse',
+                name: 'Gravitational Collapse',
+                type: 'Blunt',
+                basePower: 11,
+                coinCount: 3,
+                coinVal: 6,
+                desc: '[NUKE SKILL] Palu super-padat menciptakan ledakan sedotan masif!',
+                isNuke: true
+              }
+            ]
+          },
+          {
+            id: 'vanguard_hammer',
+            name: 'Heavy Mag-Hammer',
+            maxHp: 240,
+            hp: 240,
+            staggerThreshold: 90,
+            isStaggered: false,
+            resistances: { slash: 0.5, pierce: 1.0, blunt: 0.5 },
+            speedMin: 2,
+            speedMax: 5,
+            skills: [
+              {
+                id: 'reverse_gravity_field',
+                name: 'Reverse Gravity Field',
+                type: 'Blunt',
+                basePower: 5,
+                coinCount: 2,
+                coinVal: 4,
+                desc: 'Memutarbalikkan gravitasi arena ke Inverted-G!',
+                fieldChange: 'inverted_g',
+                isNuke: false
+              }
+            ]
+          },
+          {
+            id: 'vanguard_wings',
+            name: 'Winged Grav-Thruster',
+            maxHp: 200,
+            hp: 200,
+            staggerThreshold: 80,
+            isStaggered: false,
+            resistances: { slash: 2.0, pierce: 1.0, blunt: 0.5 },
+            speedMin: 4,
+            speedMax: 7,
+            skills: [
+              {
+                id: 'magnetic_vortex',
+                name: 'Magnetic Vortex',
+                type: 'Pierce',
+                basePower: 4,
+                coinCount: 3,
+                coinVal: 3,
+                desc: 'Menembakkan bola energi menarik musuh dan membatalkan Skill Slot target.',
+                isNuke: false
+              }
+            ]
+          }
+        ],
+        svgIllustration: `<svg viewBox="0 0 200 240">
+          <!-- Lei Heng / Vanguard Titan with thick outlines -->
+          <path d="M40 70 L160 70 L170 180 L140 230 L60 230 L30 180 Z" fill="#141c2c" stroke="#253550" stroke-width="6"/>
+          <!-- Blue Armor Plating -->
+          <polygon points="55,80 145,80 135,160 65,160" fill="#1a2e4c" stroke="#f5a623" stroke-width="4"/>
+          <!-- Electromagnetic Wings -->
+          <path d="M40 85 L10 50 L20 120 Z" fill="#00f0ff" opacity="0.8" stroke="#fff" stroke-width="2"/>
+          <path d="M160 85 L190 50 L180 120 Z" fill="#00f0ff" opacity="0.8" stroke="#fff" stroke-width="2"/>
+          <!-- Helmet Visor -->
+          <ellipse cx="100" cy="50" rx="30" ry="25" fill="#0c1017" stroke="#434c5e" stroke-width="4"/>
+          <rect x="80" y="42" width="40" height="12" rx="4" fill="#00f0ff" stroke="#fff" stroke-width="2"/>
+          <!-- Giant Hammer Handle & Head -->
+          <line x1="160" y1="40" x2="190" y2="210" stroke="#f5a623" stroke-width="8"/>
+          <rect x="140" y="30" width="55" height="40" rx="4" fill="#2d3748" stroke="#f5a623" stroke-width="4"/>
+          <circle cx="167" cy="50" r="10" fill="#00f0ff"/>
+        </svg>`
+      },
+      {
+        id: 'callis',
+        name: 'Arch-Executor Callis',
+        subtitle: 'Inspirasi: Callisto (Gallows Judicator)',
+        threat: 'WAW',
+        threatCode: 'WAW-02',
+        sectorName: 'SECTOR-02: GALLOWS ANTECHAMBER',
+        lore: 'Algojo jangkung dengan jubah abu-abu kehijauan, helm tanpa wajah yang menyimpan retakan cahaya merah darah, serta sepasang rantai jangkar gravimetrik di punggungnya.',
+        stanceText: 'EXECUTION CHAINS LOWERED',
+        initialField: 'zero_g',
+        parts: [
+          {
+            id: 'callis_body',
+            name: 'Judicator Body',
+            maxHp: 440,
+            hp: 440,
+            staggerThreshold: 180,
+            isStaggered: false,
+            resistances: { slash: 1.0, pierce: 0.5, blunt: 1.0 },
+            speedMin: 3,
+            speedMax: 6,
+            skills: [
+              {
+                id: 'crushing_collapse',
+                name: 'Crushing Collapse',
+                type: 'Pierce',
+                basePower: 8,
+                coinCount: 3,
+                coinVal: 5,
+                desc: 'Kolom cahaya merah Hyper-Density mendadak; pemenang clash instan stagger musuh!',
+                isNuke: true
+              }
+            ]
+          },
+          {
+            id: 'callis_anchor_l',
+            name: 'Grav-Anchor Alpha',
+            maxHp: 210,
+            hp: 210,
+            staggerThreshold: 80,
+            isStaggered: false,
+            resistances: { slash: 1.5, pierce: 0.5, blunt: 1.0 },
+            speedMin: 2,
+            speedMax: 5,
+            skills: [
+              {
+                id: 'grav_anchor_slam',
+                name: 'Gravitational Anchor',
+                type: 'Blunt',
+                basePower: 5,
+                coinCount: 2,
+                coinVal: 4,
+                desc: 'Hantaman jangkar hijau pudar memberi status Grav-Anchor dan perlambatan speed.',
+                isNuke: false
+              }
+            ]
+          },
+          {
+            id: 'callis_anchor_r',
+            name: 'Orbit Barrier Chain',
+            maxHp: 210,
+            hp: 210,
+            staggerThreshold: 80,
+            isStaggered: false,
+            resistances: { slash: 0.5, pierce: 1.5, blunt: 1.0 },
+            speedMin: 3,
+            speedMax: 6,
+            skills: [
+              {
+                id: 'orbit_barrier',
+                name: 'Orbit Barrier',
+                type: 'Slash',
+                basePower: 6,
+                coinCount: 2,
+                coinVal: 4,
+                desc: 'Memutar puing logam menjadi perisai dan membalikkan damage Slash.',
+                isNuke: false
+              }
+            ]
+          }
+        ],
+        svgIllustration: `<svg viewBox="0 0 200 240">
+          <!-- Callis Robed Executioner -->
+          <path d="M60 50 L140 50 L160 230 L40 230 Z" fill="#1b2420" stroke="#2e4238" stroke-width="6"/>
+          <!-- Faceless Helm with Blood-Red Cracks -->
+          <ellipse cx="100" cy="45" rx="25" ry="32" fill="#0d110f" stroke="#7e8b9b" stroke-width="4"/>
+          <path d="M95 30 L102 45 L98 55 L108 65" stroke="#ff334b" stroke-width="3" fill="none"/>
+          <!-- Rantai Jangkar Kembar -->
+          <path d="M40 70 Q10 120 30 190 L10 200 L40 220" fill="none" stroke="#5bc0de" stroke-width="5"/>
+          <path d="M160 70 Q190 120 170 190 L190 200 L160 220" fill="none" stroke="#5bc0de" stroke-width="5"/>
+        </svg>`
+      },
+      {
+        id: 'rien',
+        name: 'Shadow-Blade Rien',
+        subtitle: 'Inspirasi: Rien (Void Swordmaster)',
+        threat: 'WAW',
+        threatCode: 'WAW-09',
+        sectorName: 'SECTOR-03: EVENT HORIZON VAULT',
+        lore: 'Pendekar wanita dengan mantel hitam-keunguan asimetris dan topeng melengkung dingin. Mengalir di udara tanpa bobot memanfaatkan Zero-G Drift dengan pedang energi gravitasi berbelah ruang.',
+        stanceText: 'ZERO-G DRIFT EVASION',
+        initialField: 'zero_g',
+        parts: [
+          {
+            id: 'rien_body',
+            name: 'Shadow-Blade Blade',
+            maxHp: 380,
+            hp: 380,
+            staggerThreshold: 150,
+            isStaggered: false,
+            resistances: { slash: 0.5, pierce: 1.0, blunt: 2.0 },
+            speedMin: 5,
+            speedMax: 8,
+            skills: [
+              {
+                id: 'zero_drift_strike',
+                name: 'Zero-Drift Strike',
+                type: 'Slash',
+                basePower: 5,
+                coinCount: 3,
+                coinVal: 4,
+                desc: 'Meluncur cepat mengeksekusi tiga tebasan kilat yang memicu Bleed.',
+                isNuke: false
+              },
+              {
+                id: 'event_horizon_slice',
+                name: 'Event Horizon Slice',
+                type: 'Slash',
+                basePower: 12,
+                coinCount: 3,
+                coinVal: 5,
+                desc: '[NUKE SKILL] Menebas ruang dalam mode layar hitam-putih; Fatal Slash masif!',
+                isNuke: true
+              }
+            ]
+          },
+          {
+            id: 'rien_cloak',
+            name: 'Mirage Grav-Cloak',
+            maxHp: 220,
+            hp: 220,
+            staggerThreshold: 80,
+            isStaggered: false,
+            resistances: { slash: 1.5, pierce: 0.5, blunt: 1.0 },
+            speedMin: 4,
+            speedMax: 7,
+            skills: [
+              {
+                id: 'grav_null_mirage',
+                name: 'Grav-Null Mirage',
+                type: 'Slash',
+                basePower: 6,
+                coinCount: 2,
+                coinVal: 4,
+                desc: 'Membiaskan 3 ilusi; Counter-Attack langsung ke HP mengabaikan Shield.',
+                isNuke: false
+              }
+            ]
+          }
+        ],
+        svgIllustration: `<svg viewBox="0 0 200 240">
+          <!-- Asymmetrical Trenchcoat & Curved Mask -->
+          <path d="M70 60 L130 60 L170 230 L50 230 Z" fill="#140b1e" stroke="#b347ff" stroke-width="4"/>
+          <!-- Curved Mask -->
+          <ellipse cx="100" cy="40" rx="20" ry="24" fill="#f8fafc" stroke="#111" stroke-width="3"/>
+          <path d="M90 38 Q100 45 110 38" fill="none" stroke="#b347ff" stroke-width="3"/>
+          <!-- Void Katana -->
+          <line x1="130" y1="90" x2="30" y2="20" stroke="#00f0ff" stroke-width="4"/>
+          <line x1="130" y1="90" x2="160" y2="120" stroke="#fff" stroke-width="5"/>
+        </svg>`
+      },
+      {
+        id: 'don',
+        name: 'Lance-Knight Don',
+        subtitle: 'Inspirasi: Don Quixote (Supernova Lancer)',
+        threat: 'ALEPH',
+        threatCode: 'ALEPH-01',
+        sectorName: 'SECTOR-04: HALL OF FALSE CHIVALRY',
+        lore: 'Ksatria fanatik bertengger di atas kuda mekanis anti-gravitasi berkaki tunggal, mengenakan zirah emas kusam-merah dengan tombak bor gravimetrik raksasa yang siap meledakkan supernova.',
+        stanceText: 'ROTARY DRILL ACCELERATING',
+        initialField: 'inverted_g',
+        parts: [
+          {
+            id: 'don_knight',
+            name: 'Knight Don',
+            maxHp: 420,
+            hp: 420,
+            staggerThreshold: 170,
+            isStaggered: false,
+            resistances: { slash: 1.0, pierce: 0.5, blunt: 1.5 },
+            speedMin: 3,
+            speedMax: 7,
+            skills: [
+              {
+                id: 'justice_meltdown',
+                name: 'Justice Meltdown: Supernova Thrust',
+                type: 'Pierce',
+                basePower: 13,
+                coinCount: 3,
+                coinVal: 7,
+                desc: '[NUKE SKILL] Menukik tak terkendali; kekalahan clash picu Heavy Blunt ke seluruh tim & instant stagger!',
+                isNuke: true
+              }
+            ]
+          },
+          {
+            id: 'don_steed',
+            name: 'Anti-Grav Steed (Rocinante)',
+            maxHp: 260,
+            hp: 260,
+            staggerThreshold: 90,
+            isStaggered: false,
+            resistances: { slash: 0.5, pierce: 1.0, blunt: 1.0 },
+            speedMin: 4,
+            speedMax: 8,
+            skills: [
+              {
+                id: 'inverted_charge',
+                name: 'Inverted Charge',
+                type: 'Blunt',
+                basePower: 4,
+                coinCount: 2,
+                coinVal: 5,
+                desc: 'Menempel di langit-langit berbalik lalu menukik; ubah arena ke Inverted-G.',
+                fieldChange: 'inverted_g',
+                isNuke: false
+              }
+            ]
+          },
+          {
+            id: 'don_drill',
+            name: 'Rotary Spiral Lance',
+            maxHp: 220,
+            hp: 220,
+            staggerThreshold: 80,
+            isStaggered: false,
+            resistances: { slash: 1.5, pierce: 0.5, blunt: 0.5 },
+            speedMin: 2,
+            speedMax: 6,
+            skills: [
+              {
+                id: 'rotary_spiral_lance',
+                name: 'Rotary Spiral Lance',
+                type: 'Pierce',
+                basePower: 6,
+                coinCount: 3,
+                coinVal: 4,
+                desc: 'Memutar tombak menjadi angin puting beliung jingga-emas memicu Fragile (+30% dmg).',
+                isNuke: false
+              }
+            ]
+          }
+        ],
+        svgIllustration: `<svg viewBox="0 0 200 240">
+          <!-- Lance-Knight Don on Anti-Grav Monopod Steed -->
+          <circle cx="100" cy="50" r="22" fill="#c29d38" stroke="#ff334b" stroke-width="4"/>
+          <!-- Huge Spiral Drill Lance -->
+          <path d="M120 70 L195 20 L160 90 Z" fill="#f5a623" stroke="#fff" stroke-width="3"/>
+          <line x1="120" y1="70" x2="195" y2="20" stroke="#d32f2f" stroke-width="4"/>
+          <!-- Monopod Mechanical Steed -->
+          <path d="M70 110 L130 110 L115 190 L85 190 Z" fill="#8c1d28" stroke="#f5a623" stroke-width="4"/>
+          <line x1="100" y1="190" x2="100" y2="230" stroke="#00f0ff" stroke-width="8"/>
+          <circle cx="100" cy="235" r="8" fill="#00f0ff"/>
+        </svg>`
+      }
+    ];
+
+    /* Gravity field definitions and mechanics */
+    const GRAVITY_FIELDS = {
+      zero_g: {
+        id: 'zero_g',
+        name: 'ZERO-G FIELD',
+        className: 'field-zero-g',
+        desc: 'Zero-G: Meningkatkan koin kelincahan (+1 Coin) & Speed; Physical Defense tim & bos turun drastis (Fatal x1.5).',
+        bgPhysics: 'floating',
+        invertClash: false
+      },
+      high_g: {
+        id: 'high_g',
+        name: 'HIGH-G COMPRESSION',
+        className: 'field-high-g',
+        desc: 'High-G: Beban gravitasi tinggi! Base Power Blunt naik +3, Speed berkurang -2, peluang koin positif menurun.',
+        bgPhysics: 'falling',
+        invertClash: false
+      },
+      inverted_g: {
+        id: 'inverted_g',
+        name: 'INVERTED-G FIELD',
+        className: 'field-inverted-g',
+        desc: 'Inverted-G: Hukum Clash DIBALIK! Nilai Clash Power TERKECIL mengalahkan nilai Power tinggi!',
+        bgPhysics: 'inverted',
+        invertClash: true
+      },
+      hyper_density: {
+        id: 'hyper_density',
+        name: 'HYPER-DENSITY SINGULARITY',
+        className: 'field-hyper-density',
+        desc: 'Hyper-Density: Tekanan lubang hitam! Stagger Damage x2.0, pertahanan musuh remuk seketika.',
+        bgPhysics: 'singularity',
+        invertClash: false
+      }
+    };
+
+    /* ==========================================================================
+       3. GAME STATE MANAGEMENT
+       ========================================================================== */
+    const State = {
+      screen: 'lobby', // 'lobby' | 'battle'
+      selectedBossIndex: 0,
+      activeBoss: null,
+      agents: JSON.parse(JSON.stringify(AGENTS_DATABASE)),
+      currentGravityField: 'high_g',
+      round: 1,
+      gravitonResonance: 2, // 0 to 5
+      battleSpeedMultiplier: 1.5,
+      // Targeting plan: maps agentId -> { skillIndex, targetPartId }
+      actionPlan: {},
+      selectedAgentForTargeting: null,
+      isExecutingClash: false,
+      logs: []
+    };
+
+    /* Helper: get selected boss template */
+    function getSelectedBoss() {
+      return BOSSES_DATABASE[State.selectedBossIndex];
+    }
+
+    /* ==========================================================================
+       4. BLUEPRINT BACKGROUND CANVAS (SCREEN 1)
+       ========================================================================== */
+    const bpCanvas = document.getElementById('blueprint-canvas');
+    const bpCtx = bpCanvas.getContext('2d');
+
+    function resizeBlueprintCanvas() {
+      bpCanvas.width = window.innerWidth;
+      bpCanvas.height = window.innerHeight;
+      drawBlueprint();
+    }
+
+    function drawBlueprint() {
+      const w = bpCanvas.width;
+      const h = bpCanvas.height;
+      bpCtx.clearRect(0, 0, w, h);
+
+      // Grid
+      bpCtx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+      bpCtx.lineWidth = 1;
+      const step = 40;
+      for (let x = 0; x < w; x += step) {
+        bpCtx.beginPath();
+        bpCtx.moveTo(x, 0);
+        bpCtx.lineTo(x, h);
+        bpCtx.stroke();
+      }
+      for (let y = 0; y < h; y += step) {
+        bpCtx.beginPath();
+        bpCtx.moveTo(0, y);
+        bpCtx.lineTo(w, y);
+        bpCtx.stroke();
+      }
+
+      // Facility schematic lines
+      bpCtx.strokeStyle = 'rgba(245, 166, 35, 0.2)';
+      bpCtx.lineWidth = 2;
+      bpCtx.strokeRect(w * 0.1, h * 0.15, w * 0.8, h * 0.7);
+
+      // Radial Astrolabe circles
+      bpCtx.strokeStyle = 'rgba(179, 71, 255, 0.18)';
+      bpCtx.beginPath();
+      bpCtx.arc(w * 0.5, h * 0.45, 180, 0, Math.PI * 2);
+      bpCtx.stroke();
+      bpCtx.beginPath();
+      bpCtx.arc(w * 0.5, h * 0.45, 260, 0, Math.PI * 2);
+      bpCtx.stroke();
+    }
+
+    window.addEventListener('resize', resizeBlueprintCanvas);
+
+    /* ==========================================================================
+       5. THE GRAVIMETRIC ARCHIVES CANVAS (LIBRARY OF RUINA AESTHETIC)
+       ========================================================================== */
+    const arenaCanvas = document.getElementById('arena-canvas');
+    const arenaCtx = arenaCanvas.getContext('2d');
+
+    // Particle objects: floating books, pages, warm candles, stone fragments
+    let arenaParticles = [];
+    let astrolabeAngle = 0;
+
+    function initArenaParticles() {
+      arenaCanvas.width = window.innerWidth;
+      arenaCanvas.height = window.innerHeight;
+      arenaParticles = [];
+      const count = 45;
+      for (let i = 0; i < count; i++) {
+        arenaParticles.push({
+          x: Math.random() * arenaCanvas.width,
+          y: Math.random() * arenaCanvas.height,
+          type: i % 4, // 0: book, 1: paper sheet, 2: candle, 3: stone/pillar fragment
+          size: 14 + Math.random() * 24,
+          vx: (Math.random() - 0.5) * 0.8,
+          vy: (Math.random() - 0.5) * 0.8,
+          rot: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.02
+        });
+      }
+    }
+
+    function renderArenaWorld() {
+      if (State.screen !== 'battle') {
+        requestAnimationFrame(renderArenaWorld);
+        return;
+      }
+
+      const w = arenaCanvas.width;
+      const h = arenaCanvas.height;
+      arenaCtx.clearRect(0, 0, w, h);
+
+      // 1. Dark Mahogany Giant Bookshelves Background
+      arenaCtx.fillStyle = '#0a0d14';
+      arenaCtx.fillRect(0, 0, w, h);
+
+      // Bookshelf vertical pillars (Ruina style)
+      arenaCtx.fillStyle = '#141822';
+      const colWidth = 140;
+      for (let x = 0; x < w; x += colWidth) {
+        arenaCtx.fillRect(x + 10, 0, colWidth - 20, h);
+        // Gold bindings
+        arenaCtx.strokeStyle = 'rgba(229, 184, 105, 0.15)';
+        arenaCtx.lineWidth = 2;
+        for (let y = 40; y < h; y += 70) {
+          arenaCtx.strokeRect(x + 15, y, colWidth - 30, 6);
+        }
+      }
+
+      // 2. Central Rotating Golden Astrolabe Core
+      astrolabeAngle += 0.005;
+      const coreX = w * 0.5;
+      const coreY = h * 0.32;
+
+      arenaCtx.save();
+      arenaCtx.translate(coreX, coreY);
+      arenaCtx.rotate(astrolabeAngle);
+
+      // Glowing Astrolabe Rings
+      arenaCtx.strokeStyle = 'rgba(245, 166, 35, 0.45)';
+      arenaCtx.lineWidth = 3;
+      arenaCtx.beginPath();
+      arenaCtx.arc(0, 0, 160, 0, Math.PI * 2);
+      arenaCtx.stroke();
+
+      arenaCtx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+      arenaCtx.lineWidth = 2;
+      arenaCtx.beginPath();
+      arenaCtx.arc(0, 0, 120, 0, Math.PI * 2);
+      arenaCtx.stroke();
+
+      // Astrolabe Cross Arms
+      arenaCtx.strokeStyle = 'rgba(229, 184, 105, 0.4)';
+      arenaCtx.beginPath();
+      arenaCtx.moveTo(-180, 0); arenaCtx.lineTo(180, 0);
+      arenaCtx.moveTo(0, -180); arenaCtx.lineTo(0, 180);
+      arenaCtx.stroke();
+
+      // Graviton core glow
+      const grad = arenaCtx.createRadialGradient(0, 0, 10, 0, 0, 100);
+      grad.addColorStop(0, 'rgba(0, 240, 255, 0.5)');
+      grad.addColorStop(0.5, 'rgba(179, 71, 255, 0.2)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      arenaCtx.fillStyle = grad;
+      arenaCtx.beginPath();
+      arenaCtx.arc(0, 0, 100, 0, Math.PI * 2);
+      arenaCtx.fill();
+
+      arenaCtx.restore();
+
+      // 3. Dynamic Gravity Affected Floating Elements (Books, Candlelights, Rubble)
+      const field = GRAVITY_FIELDS[State.currentGravityField];
+
+      arenaParticles.forEach(p => {
+        // Adjust velocity based on current gravity field
+        if (field.bgPhysics === 'floating') {
+          p.vy -= 0.015; // Slow drift upward
+          if (p.vy < -0.8) p.vy = -0.8;
+        } else if (field.bgPhysics === 'falling') {
+          p.vy += 0.05; // Heavy drop
+          if (p.vy > 2.5) p.vy = 2.5;
+        } else if (field.bgPhysics === 'inverted') {
+          p.vy -= 0.08; // Rapid rise to ceiling
+          if (p.vy < -2.8) p.vy = -2.8;
+        } else if (field.bgPhysics === 'singularity') {
+          // Pulled towards coreX, coreY
+          const dx = coreX - p.x;
+          const dy = coreY - p.y;
+          p.vx += dx * 0.0003;
+          p.vy += dy * 0.0003;
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.rotSpeed;
+
+        // Wrap around bounds
+        if (p.y < -50) p.y = h + 40;
+        if (p.y > h + 50) p.y = -40;
+        if (p.x < -50) p.x = w + 40;
+        if (p.x > w + 50) p.x = -40;
+
+        arenaCtx.save();
+        arenaCtx.translate(p.x, p.y);
+        arenaCtx.rotate(p.rot);
+
+        if (p.type === 0) {
+          // Floating Mahogany Book with Gold Ink Edge
+          arenaCtx.fillStyle = '#3a1b14';
+          arenaCtx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.7);
+          arenaCtx.fillStyle = '#e5b869';
+          arenaCtx.fillRect(-p.size / 2 + 2, -p.size / 3 + 2, 4, p.size * 0.7 - 4);
+          arenaCtx.strokeStyle = '#1b0e0a';
+          arenaCtx.lineWidth = 1.5;
+          arenaCtx.strokeRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.7);
+        } else if (p.type === 1) {
+          // Fluttering Parchment Paper
+          arenaCtx.fillStyle = 'rgba(235, 225, 205, 0.7)';
+          arenaCtx.fillRect(-p.size / 3, -p.size / 2, p.size * 0.6, p.size);
+          arenaCtx.strokeStyle = 'rgba(100, 80, 50, 0.3)';
+          arenaCtx.beginPath();
+          arenaCtx.moveTo(-p.size / 4, -p.size / 4);
+          arenaCtx.lineTo(p.size / 4, -p.size / 4);
+          arenaCtx.stroke();
+        } else if (p.type === 2) {
+          // Floating Amber Candle
+          arenaCtx.fillStyle = '#e2d8c3';
+          arenaCtx.fillRect(-3, 0, 6, 16);
+          // Warm Candle flame
+          const flameGrad = arenaCtx.createRadialGradient(0, -4, 1, 0, -4, 12);
+          flameGrad.addColorStop(0, '#fff');
+          flameGrad.addColorStop(0.4, '#ff9800');
+          flameGrad.addColorStop(1, 'rgba(255, 152, 0, 0)');
+          arenaCtx.fillStyle = flameGrad;
+          arenaCtx.beginPath();
+          arenaCtx.arc(0, -4, 12, 0, Math.PI * 2);
+          arenaCtx.fill();
+        } else {
+          // Torn Stone Pillar Fragment
+          arenaCtx.fillStyle = '#222834';
+          arenaCtx.beginPath();
+          arenaCtx.moveTo(-p.size / 2, -p.size / 2);
+          arenaCtx.lineTo(p.size / 2, -p.size / 3);
+          arenaCtx.lineTo(p.size / 3, p.size / 2);
+          arenaCtx.lineTo(-p.size / 3, p.size / 3);
+          arenaCtx.closePath();
+          arenaCtx.fill();
+          arenaCtx.strokeStyle = '#3e4a60';
+          arenaCtx.stroke();
+        }
+
+        arenaCtx.restore();
+      });
+
+      // Update targeting arrows
+      drawTargetingLinks();
+
+      requestAnimationFrame(renderArenaWorld);
+    }
+
+    /* ==========================================================================
+       6. TARGETING CONNECTIONS OVERLAY (SVG ARROWS)
+       ========================================================================== */
+    const targetSvg = document.getElementById('targeting-svg');
+
+    function drawTargetingLinks() {
+      if (State.screen !== 'battle') return;
+      targetSvg.setAttribute('width', window.innerWidth);
+      targetSvg.setAttribute('height', window.innerHeight);
+
+      let svgHtml = '';
+
+      Object.entries(State.actionPlan).forEach(([agentId, plan]) => {
+        const agentEl = document.getElementById(`agent-card-${agentId}`);
+        const partEl = document.getElementById(`boss-part-${plan.targetPartId}`);
+
+        if (agentEl && partEl) {
+          const r1 = agentEl.getBoundingClientRect();
+          const r2 = partEl.getBoundingClientRect();
+
+          const x1 = r1.left + r1.width / 2;
+          const y1 = r1.top;
+          const x2 = r2.left + r2.width / 2;
+          const y2 = r2.bottom;
+
+          // Control point for smooth curved arc
+          const cx = (x1 + x2) / 2 + (x1 < x2 ? -40 : 40);
+          const cy = (y1 + y2) / 2;
+
+          // Color based on clash prediction
+          const forecast = calculateClashForecast(agentId, plan.skillIndex, plan.targetPartId);
+          let strokeColor = '#f5a623';
+          if (forecast === 'DOMINATING') strokeColor = '#00f0ff';
+          if (forecast === 'FAVORABLE') strokeColor = '#3be896';
+          if (forecast === 'HOPELESS') strokeColor = '#ff334b';
+
+          svgHtml += `
+            <path d="M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}" 
+                  fill="none" stroke="${strokeColor}" stroke-width="3" 
+                  stroke-dasharray="6,4" opacity="0.85">
+              <animate attributeName="stroke-dashoffset" values="20;0" dur="0.8s" repeatCount="indefinite" />
+            </path>
+            <circle cx="${x2}" cy="${y2}" r="5" fill="${strokeColor}" />
+          `;
+        }
+      });
+
+      targetSvg.innerHTML = svgHtml;
+    }
+
+    /* ==========================================================================
+       7. CLASH SYSTEM & COIN TOSS MECHANICS
+       ========================================================================== */
+    /* Calculate forecast label between an agent's skill and boss part's current scheduled skill */
+    function calculateClashForecast(agentId, skillIdx, partId) {
+      const agent = State.agents.find(a => a.id === agentId);
+      const boss = State.activeBoss;
+      if (!agent || !boss) return 'NEUTRAL';
+      const part = boss.parts.find(p => p.id === partId);
+      if (!part || part.isStaggered) return 'DOMINATING';
+
+      const agentSkill = agent.skills[skillIdx];
+      const bossSkill = part.scheduledSkill;
+      if (!bossSkill) return 'DOMINATING';
+
+      // Evaluate expected powers
+      const agentExpected = agentSkill.basePower + (agentSkill.coinCount * agentSkill.coinVal * 0.6);
+      const bossExpected = bossSkill.basePower + (bossSkill.coinCount * bossSkill.coinVal * 0.5);
+
+      const inverted = GRAVITY_FIELDS[State.currentGravityField].invertClash;
+
+      let diff = agentExpected - bossExpected;
+      if (inverted) diff = -diff; // In Inverted-G, lower is better!
+
+      if (diff >= 6) return 'DOMINATING';
+      if (diff >= 2) return 'FAVORABLE';
+      if (diff >= -2) return 'NEUTRAL';
+      if (diff >= -5) return 'STRUGGLING';
+      return 'HOPELESS';
+    }
+
+    /* Coin Flip calculation taking Sanity & Gravity Field into account */
+    function rollCoin(sanity, gravityFieldId) {
+      // Base positive coin chance: 50%
+      let baseChance = 0.50 + (sanity / 100); // SP 45 -> 95%, SP -45 -> 5%
+      if (gravityFieldId === 'high_g') {
+        baseChance -= 0.15; // High-G reduces heads chance
+      } else if (gravityFieldId === 'zero_g') {
+        baseChance += 0.10; // Zero-G elevates heads chance
+      }
+      baseChance = Math.max(0.05, Math.min(0.95, baseChance));
+      return Math.random() < baseChance;
+    }
+
+    /* Calculate total power after flipping coins */
+    function evaluateSkillPower(skill, sanity, gravityFieldId) {
+      let power = skill.basePower;
+      const coinResults = [];
+
+      // High-G increases Blunt base power
+      if (gravityFieldId === 'high_g' && skill.type === 'Blunt') {
+        power += 3;
+      }
+
+      let activeCoins = skill.coinCount;
+      // Zero-G gives +1 coin on agile skills
+      if (gravityFieldId === 'zero_g' && (skill.type === 'Slash' || skill.type === 'Pierce')) {
+        activeCoins += 1;
+      }
+
+      for (let i = 0; i < activeCoins; i++) {
+        const isHeads = rollCoin(sanity, gravityFieldId);
+        coinResults.push(isHeads);
+        if (isHeads) {
+          power += skill.coinVal;
+        }
+      }
+
+      return { power, coinResults, activeCoins };
+    }
+
+    /* ==========================================================================
+       8. LOBBY RENDERING & UI BINDINGS
+       ========================================================================== */
+    function renderLobby() {
+      // 1. Render Sector Cards
+      const container = document.getElementById('sectors-container');
+      container.innerHTML = BOSSES_DATABASE.map((boss, idx) => {
+        const threatClass = `threat-${boss.threat.toLowerCase()}`;
+        const isSelected = idx === State.selectedBossIndex;
+        return `
+          <div class="sector-card ${isSelected ? 'selected' : ''}" onclick="selectBossSector(${idx})">
+            <div class="sector-thumb">
+              ${boss.svgIllustration}
+            </div>
+            <div class="sector-meta">
+              <h3>${boss.name}</h3>
+              <div class="sub-info">${boss.subtitle} // ${boss.sectorName}</div>
+            </div>
+            <div>
+              <span class="threat-tag ${threatClass}">${boss.threat} // ${boss.threatCode}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 2. Render Boss Dossier for current selection
+      renderBossDossier();
+
+      // 3. Render Agent Roster Slots
+      renderRosterSlots();
+
+      // Update Top HUD
+      const currBoss = getSelectedBoss();
+      document.getElementById('hud-sector-name').textContent = currBoss.sectorName.split(':')[0];
+      document.getElementById('hud-threat-code').textContent = currBoss.threatCode;
+    }
+
+    function selectBossSector(idx) {
+      sound.playMetalClick();
+      State.selectedBossIndex = idx;
+      renderLobby();
+    }
+
+    function renderBossDossier() {
+      const boss = getSelectedBoss();
+      const panel = document.getElementById('boss-dossier-panel');
+      const threatClass = `threat-${boss.threat.toLowerCase()}`;
+
+      panel.innerHTML = `
+        <div class="box-header" style="margin: -16px -16px 14px -16px;">
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            ANOMALY DOSSIER: ${boss.name.toUpperCase()}
+          </h2>
+          <span class="threat-tag ${threatClass}">${boss.threat} HAZARD</span>
+        </div>
+
+        <div class="boss-portrait-hero">
+          ${boss.svgIllustration}
+        </div>
+
+        <div class="boss-lore-text">
+          ${boss.lore}
+        </div>
+
+        <h4 style="font-family: var(--font-display); font-size: 0.85rem; color: var(--accent-yellow); margin-bottom: 6px;">
+          TARGETABLE BODY PARTS & RESISTANCES:
+        </h4>
+
+        <div class="boss-parts-preview">
+          ${boss.parts.map(p => `
+            <div class="part-preview-pill">
+              <div>
+                <strong>${p.name}</strong> (HP: ${p.maxHp} | Stagger: ${p.staggerThreshold})
+              </div>
+              <div class="resist-tags">
+                <span class="${getResistClass(p.resistances.slash)}">S: ${p.resistances.slash}x</span>
+                <span class="${getResistClass(p.resistances.pierce)}">P: ${p.resistances.pierce}x</span>
+                <span class="${getResistClass(p.resistances.blunt)}">B: ${p.resistances.blunt}x</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div style="margin-top: 14px; background: rgba(0, 240, 255, 0.05); border: 1px solid var(--border-sharp); padding: 8px 12px; font-size: 0.75rem;">
+          <strong style="color: var(--accent-cyan);">GRAVITATIONAL HAZARD ANOMALY:</strong>
+          <span style="color: #cbd5e1; margin-left: 6px;">Pertarungan dimulai dalam konfigurasi <strong>${GRAVITY_FIELDS[boss.initialField].name}</strong>.</span>
+        </div>
+      `;
+    }
+
+    function getResistClass(val) {
+      if (val >= 1.5) return 'resist-fatal';
+      if (val <= 0.75) return 'resist-ineff';
+      return 'resist-normal';
+    }
+
+    function renderRosterSlots() {
+      const container = document.getElementById('roster-slots-grid');
+      container.innerHTML = State.agents.map((agent, i) => `
+        <div class="agent-slot-card ${agent.deployed ? 'deployed' : ''}" onclick="toggleAgentDeployment('${agent.id}')">
+          <span class="stamp-badge">${agent.deployed ? 'AUTHORIZED' : 'STANDBY'}</span>
+          <div class="slot-mini-portrait">
+            <div class="slot-avatar">${agent.svgAvatar}</div>
+            <div>
+              <div class="slot-info-name">${agent.name}</div>
+              <div class="slot-info-role">${agent.role.split('/')[0]}</div>
+            </div>
+          </div>
+          <div class="slot-stats-row">
+            <span>SPD ${agent.speedMin}-${agent.speedMax}</span>
+            <span>HP ${agent.hp}/${agent.maxHp}</span>
+            <span style="color: ${agent.sanity >= 0 ? 'var(--accent-cyan)' : 'var(--accent-red)'};">SP ${agent.sanity}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleAgentDeployment(agentId) {
+      const agent = State.agents.find(a => a.id === agentId);
+      if (!agent) return;
+      agent.deployed = !agent.deployed;
+      sound.playStamp();
+      renderRosterSlots();
+    }
+
+    /* Initiate Gravity Suppression (Transition into Battle Screen) */
+    document.getElementById('btn-initiate-suppression').addEventListener('click', () => {
+      sound.init();
+      sound.playBlackHoleWhoosh();
+
+      // Trigger Singularity Black hole animation
+      const transitionEl = document.getElementById('singularity-transition');
+      transitionEl.style.display = 'flex';
+
+      setTimeout(() => {
+        // Switch screens
+        document.getElementById('screen-lobby').style.display = 'none';
+        document.getElementById('screen-battle').style.display = 'flex';
+        transitionEl.style.display = 'none';
+
+        startBattleEncounter();
+      }, 1100);
+    });
+
+    /* ==========================================================================
+       9. BATTLE INITIALIZATION & ROUND CYCLING
+       ========================================================================== */
+    function startBattleEncounter() {
+      State.screen = 'battle';
+      const template = getSelectedBoss();
+      State.activeBoss = JSON.parse(JSON.stringify(template));
+      State.currentGravityField = template.initialField;
+      State.round = 1;
+      State.gravitonResonance = 2;
+      State.actionPlan = {};
+      State.selectedAgentForTargeting = null;
+      State.isExecutingClash = false;
+
+      // Reset agent hp if needed
+      State.agents.forEach(a => {
+        a.hp = a.maxHp;
+        a.sanity = 0;
+        a.isStaggered = false;
+      });
+
+      logCombat(`[SYSTEM ALERT] Suppression Protocol initiated against ${State.activeBoss.name}.`);
+      logCombat(`[GRAV-CORE] Local gravity field configured to: ${GRAVITY_FIELDS[State.currentGravityField].name}.`);
+
+      initArenaParticles();
+      prepareNewRound();
+    }
+
+    function prepareNewRound() {
+      // 1. Update Gravity HUD
+      updateGravityHud();
+
+      // 2. Roll Speed for Agents & Boss Parts
+      rollSpeeds();
+
+      // 3. Boss schedules skills on parts
+      scheduleBossSkills();
+
+      // 4. Default auto-target assignment
+      autoAssignOptimalTargets();
+
+      // 5. Render UI
+      renderBattleScene();
+    }
+
+    function updateGravityHud() {
+      const field = GRAVITY_FIELDS[State.currentGravityField];
+      const lbl = document.getElementById('grav-field-label');
+      lbl.className = `grav-field-badge ${field.className}`;
+      document.getElementById('grav-name').textContent = field.name;
+      document.getElementById('grav-desc-text').textContent = field.desc;
+
+      document.getElementById('hud-round-number').textContent = State.round;
+
+      // Update resonance orbs
+      const orbsContainer = document.getElementById('resonance-orbs-container');
+      orbsContainer.innerHTML = [0, 1, 2, 3, 4].map(idx => `
+        <div class="res-orb ${idx < State.gravitonResonance ? 'active' : ''}"></div>
+      `).join('');
+    }
+
+    function rollSpeeds() {
+      const field = State.currentGravityField;
+      let speedMod = 0;
+      if (field === 'zero_g') speedMod += 1;
+      if (field === 'high_g') speedMod -= 1;
+
+      // Roll Agents
+      State.agents.forEach(agent => {
+        let rolled = Math.floor(Math.random() * (agent.speedMax - agent.speedMin + 1)) + agent.speedMin + speedMod;
+        agent.currentSpeed = Math.max(1, rolled);
+      });
+
+      // Roll Boss Parts
+      State.activeBoss.parts.forEach(part => {
+        let rolled = Math.floor(Math.random() * (part.speedMax - part.speedMin + 1)) + part.speedMin + speedMod;
+        part.currentSpeed = Math.max(1, rolled);
+      });
+    }
+
+    function scheduleBossSkills() {
+      State.activeBoss.parts.forEach((part, idx) => {
+        if (part.isStaggered) {
+          part.scheduledSkill = null;
+          return;
+        }
+
+        // On round 3 or 5, check for Nuke skill
+        const hasNuke = part.skills.find(s => s.isNuke);
+        if (hasNuke && (State.round === 3 || State.round === 5)) {
+          part.scheduledSkill = hasNuke;
+        } else {
+          // Normal skill selection
+          const normalSkills = part.skills.filter(s => !s.isNuke);
+          const chosen = normalSkills[Math.floor(Math.random() * normalSkills.length)] || part.skills[0];
+          part.scheduledSkill = chosen;
+        }
+      });
+    }
+
+    function autoAssignOptimalTargets() {
+      State.actionPlan = {};
+      const activeAgents = State.agents.filter(a => a.deployed && !a.isStaggered && a.hp > 0);
+      const activeParts = State.activeBoss.parts.filter(p => !p.isStaggered && p.hp > 0);
+
+      if (activeParts.length === 0) return;
+
+      activeAgents.forEach((agent, i) => {
+        // Distribute target parts
+        const targetPart = activeParts[i % activeParts.length];
+        // Choose best normal skill
+        State.actionPlan[agent.id] = {
+          skillIndex: 0,
+          targetPartId: targetPart.id
+        };
+      });
+    }
+
+    /* ==========================================================================
+       10. BATTLE ARENA UI RENDERING & INTERACTION
+       ========================================================================== */
+    function renderBattleScene() {
+      // 1. Render Boss Graphic & Body Parts
+      const boss = State.activeBoss;
+      document.getElementById('boss-sprite-anchor').innerHTML = `
+        ${boss.svgIllustration}
+        <div class="boss-status-overlay" id="boss-stance-text">${boss.stanceText}</div>
+      `;
+
+      const partsRack = document.getElementById('boss-parts-container');
+      partsRack.innerHTML = boss.parts.map(part => {
+        const hpPercent = Math.max(0, Math.min(100, (part.hp / part.maxHp) * 100));
+        const staggerPos = (part.staggerThreshold / part.maxHp) * 100;
+        const skill = part.scheduledSkill;
+
+        return `
+          <div class="boss-part-module ${part.isStaggered ? 'staggered' : ''}" 
+               id="boss-part-${part.id}"
+               onclick="handleBossPartClick('${part.id}')">
+            ${part.isStaggered ? '<div class="stagger-banner">STAGGERED</div>' : ''}
+            <div class="part-title-row">
+              <h5>${part.name}</h5>
+              <span class="part-speed-badge">SPEED ${part.currentSpeed}</span>
+            </div>
+
+            <div class="gauge-wrapper">
+              <div class="gauge-fill-hp" style="width: ${hpPercent}%;"></div>
+              <div class="stagger-threshold-tick" style="left: ${staggerPos}%;" title="Stagger Threshold"></div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 4px;">
+              <span>HP: ${part.hp} / ${part.maxHp}</span>
+              <span class="${getResistClass(part.resistances.slash)}">S:${part.resistances.slash} P:${part.resistances.pierce} B:${part.resistances.blunt}</span>
+            </div>
+
+            ${skill ? `
+              <div class="boss-action-pill ${skill.isNuke ? 'nuke' : ''}">
+                <div>
+                  <strong style="color: ${skill.isNuke ? '#ff334b' : '#fff'};">${skill.name}</strong> 
+                  <small>(${skill.type})</small>
+                </div>
+                <div class="action-power-coins">
+                  <span>PWR ${skill.basePower}</span>
+                  <div>
+                    ${Array(skill.coinCount).fill(0).map(() => '<span class="coin-pip"></span>').join('')}
+                  </div>
+                </div>
+              </div>
+            ` : '<div style="font-size:0.75rem; color:#7e8b9b; padding:4px;">No Action (Staggered)</div>'}
+          </div>
+        `;
+      }).join('');
+
+      // 2. Render Player Team Combatant Cards
+      const teamRow = document.getElementById('battle-agents-container');
+      teamRow.innerHTML = State.agents.filter(a => a.deployed).map(agent => {
+        const hpPercent = Math.max(0, Math.min(100, (agent.hp / agent.maxHp) * 100));
+        // Sanity is -45 to +45; map to 0 - 100%
+        const spPercent = Math.max(0, Math.min(100, ((agent.sanity + 45) / 90) * 100));
+        const plan = State.actionPlan[agent.id] || { skillIndex: 0 };
+        const isSelected = State.selectedAgentForTargeting === agent.id;
+
+        return `
+          <div class="agent-combatant-card ${isSelected ? 'selected-source' : ''} ${agent.isStaggered || agent.hp <= 0 ? 'staggered-agent' : ''}" 
+               id="agent-card-${agent.id}"
+               onclick="selectAgentCard('${agent.id}')">
+            <div class="combatant-top-meta">
+              <span class="combatant-name">${agent.name}</span>
+              <span class="combatant-speed-pill">SPD ${agent.currentSpeed}</span>
+            </div>
+
+            <div class="combatant-portrait-row">
+              <div class="combatant-mini-art">${agent.svgAvatar}</div>
+              <div class="combatant-vitals">
+                <div class="vital-bar" title="HP: ${agent.hp}/${agent.maxHp}">
+                  <div class="vital-hp-fill" style="width: ${hpPercent}%;"></div>
+                </div>
+                <div class="vital-bar" title="Sanity: ${agent.sanity}">
+                  <div class="vital-sp-fill" style="width: ${spPercent}%;"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.62rem; color:var(--text-muted);">
+                  <span>${agent.hp} HP</span>
+                  <span style="color: ${agent.sanity >= 0 ? 'var(--accent-cyan)' : 'var(--accent-red)'};">${agent.sanity} SP</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Skill Slot Tokens -->
+            <div class="combatant-skills-deck">
+              ${agent.skills.map((s, sIdx) => {
+                const isChosen = plan.skillIndex === sIdx;
+                const isUlt = s.isUltimate;
+                const ultReady = isUlt && State.gravitonResonance >= s.resonanceCost;
+                return `
+                  <button class="skill-slot-token ${isChosen ? 'active-chosen' : ''} ${isUlt ? 'ultimate-token' : ''} ${ultReady ? 'ready' : ''}"
+                          onclick="event.stopPropagation(); chooseAgentSkill('${agent.id}', ${sIdx})"
+                          title="${s.name} (${s.type}) - ${s.desc}">
+                    ${isUlt ? 'ULT' : 'S' + (sIdx + 1)}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      drawTargetingLinks();
+    }
+
+    function selectAgentCard(agentId) {
+      sound.playMetalClick();
+      State.selectedAgentForTargeting = agentId;
+      renderBattleScene();
+    }
+
+    function chooseAgentSkill(agentId, skillIdx) {
+      sound.playMetalClick();
+      const agent = State.agents.find(a => a.id === agentId);
+      if (!agent) return;
+      const skill = agent.skills[skillIdx];
+
+      // If ultimate, check resonance
+      if (skill.isUltimate && State.gravitonResonance < skill.resonanceCost) {
+        showSpeechBark(`Resonance belum cukup! Butuh ${skill.resonanceCost} Graviton Resonances.`, agentId);
+        return;
+      }
+
+      if (!State.actionPlan[agentId]) {
+        State.actionPlan[agentId] = { skillIndex: skillIdx, targetPartId: State.activeBoss.parts[0].id };
+      } else {
+        State.actionPlan[agentId].skillIndex = skillIdx;
+      }
+
+      State.selectedAgentForTargeting = agentId;
+      renderBattleScene();
+    }
+
+    function handleBossPartClick(partId) {
+      if (State.selectedAgentForTargeting) {
+        sound.playMetalClick();
+        if (!State.actionPlan[State.selectedAgentForTargeting]) {
+          State.actionPlan[State.selectedAgentForTargeting] = { skillIndex: 0, targetPartId: partId };
+        } else {
+          State.actionPlan[State.selectedAgentForTargeting].targetPartId = partId;
+        }
+        renderBattleScene();
+      }
+    }
+
+    document.getElementById('btn-auto-assign').addEventListener('click', () => {
+      sound.playMetalClick();
+      autoAssignOptimalTargets();
+      renderBattleScene();
+    });
+
+    /* ==========================================================================
+       11. CLASH EXECUTION ENGINE & COMBAT RESOLUTION
+       ========================================================================== */
+    document.getElementById('btn-start-combat').addEventListener('click', () => {
+      if (State.isExecutingClash) return;
+      sound.init();
+      executeCombatTurn();
+    });
+
+    async function executeCombatTurn() {
+      State.isExecutingClash = true;
+      document.getElementById('btn-start-combat').disabled = true;
+
+      // Collect all clashes and one-sided attacks
+      const activeAgents = State.agents.filter(a => a.deployed && a.hp > 0 && !a.isStaggered);
+      // Sort agents by Speed (Faster goes first)
+      activeAgents.sort((a, b) => b.currentSpeed - a.currentSpeed);
+
+      for (const agent of activeAgents) {
+        if (agent.hp <= 0) continue;
+        const plan = State.actionPlan[agent.id];
+        if (!plan) continue;
+
+        const bossPart = State.activeBoss.parts.find(p => p.id === plan.targetPartId);
+        if (!bossPart || bossPart.hp <= 0) continue;
+
+        const agentSkill = agent.skills[plan.skillIndex];
+        const bossSkill = bossPart.scheduledSkill;
+
+        // If skill was ultimate, consume resonance
+        if (agentSkill.isUltimate) {
+          State.gravitonResonance = Math.max(0, State.gravitonResonance - agentSkill.resonanceCost);
+          updateGravityHud();
+        }
+
+        // If field changing skill, apply field change
+        if (agentSkill.fieldChange) {
+          State.currentGravityField = agentSkill.fieldChange;
+          updateGravityHud();
+          showSpeechBark(`GRAVITY FIELD MUTATED: ${GRAVITY_FIELDS[State.currentGravityField].name}!`, agent.id);
+          await sleep(500);
+        }
+
+        // Check if this is a Clash (Boss part has an active scheduled skill)
+        if (bossSkill && !bossPart.isStaggered) {
+          await runClashSequence(agent, agentSkill, bossPart, bossSkill);
+        } else {
+          // One-sided direct attack on boss part
+          await runOneSidedAttack(agent, agentSkill, bossPart, true);
+        }
+
+        // Check if boss defeated or part staggered
+        if (checkEndgameCondition()) return;
+        renderBattleScene();
+      }
+
+      // Boss parts that haven't attacked yet and weren't cancelled launch one-sided attacks
+      for (const part of State.activeBoss.parts) {
+        if (part.hp > 0 && !part.isStaggered && part.scheduledSkill && !part.actionCancelled) {
+          // Pick a random living agent
+          const livingAgents = State.agents.filter(a => a.deployed && a.hp > 0);
+          if (livingAgents.length > 0) {
+            const victim = livingAgents[Math.floor(Math.random() * livingAgents.length)];
+            await runOneSidedAttack(part, part.scheduledSkill, victim, false);
+            if (checkEndgameCondition()) return;
+            renderBattleScene();
+          }
+        }
+      }
+
+      // End of turn recovery / ticks
+      finishTurnCycle();
+    }
+
+    /* Dramatic Cinematic Clash Sequence */
+    async function runClashSequence(agent, agentSkill, bossPart, bossSkill) {
+      const modal = document.getElementById('clash-cinematic-modal');
+      modal.style.display = 'flex';
+
+      document.getElementById('clash-agent-name').textContent = agent.name.toUpperCase();
+      document.getElementById('clash-agent-skill').textContent = `${agentSkill.name} [${agentSkill.type}]`;
+      document.getElementById('clash-enemy-name').textContent = bossPart.name.toUpperCase();
+      document.getElementById('clash-enemy-skill').textContent = `${bossSkill.name} [${bossSkill.type}]`;
+
+      const inverted = GRAVITY_FIELDS[State.currentGravityField].invertClash;
+
+      let agentCoinsLeft = agentSkill.coinCount;
+      if (State.currentGravityField === 'zero_g' && (agentSkill.type === 'Slash' || agentSkill.type === 'Pierce')) {
+        agentCoinsLeft += 1;
+      }
+      let bossCoinsLeft = bossSkill.coinCount;
+
+      let clashRound = 1;
+      let clashWinner = null; // 'agent' | 'boss'
+
+      while (agentCoinsLeft > 0 && bossCoinsLeft > 0 && clashRound <= 5) {
+        document.getElementById('clash-feedback-log').textContent = `CLASH ROUND ${clashRound} ${inverted ? '(INVERTED-G HIERARCHY)' : ''}`;
+
+        // Render Coins
+        renderClashCoinPips('clash-agent-coins', agentCoinsLeft);
+        renderClashCoinPips('clash-enemy-coins', bossCoinsLeft);
+
+        sound.playCoinFlip();
+        await sleep(350 / State.battleSpeedMultiplier);
+
+        // Roll Powers
+        const agentRoll = evaluateSkillPower(agentSkill, agent.sanity, State.currentGravityField);
+        const bossRoll = evaluateSkillPower(bossSkill, 0, State.currentGravityField);
+
+        document.getElementById('clash-agent-power').textContent = agentRoll.power;
+        document.getElementById('clash-enemy-power').textContent = bossRoll.power;
+
+        // Visual Clash impact
+        sound.playClashImpact();
+        triggerClashSparkCanvas();
+        shakeScreen();
+
+        await sleep(600 / State.battleSpeedMultiplier);
+
+        // Compare power
+        let agentWins = false;
+        let isTie = agentRoll.power === bossRoll.power;
+
+        if (inverted) {
+          agentWins = agentRoll.power < bossRoll.power; // In Inverted-G, lowest power wins!
+        } else {
+          agentWins = agentRoll.power > bossRoll.power;
+        }
+
+        if (isTie) {
+          document.getElementById('clash-feedback-log').textContent = `ROUND ${clashRound}: PARITY TIE!`;
+          await sleep(400 / State.battleSpeedMultiplier);
+        } else if (agentWins) {
+          bossCoinsLeft--;
+          document.getElementById('clash-feedback-log').textContent = `${agent.name} WINS ROUND ${clashRound}! (-1 Enemy Coin)`;
+          agent.sanity = Math.min(45, agent.sanity + 6);
+        } else {
+          agentCoinsLeft--;
+          document.getElementById('clash-feedback-log').textContent = `${bossPart.name} WINS ROUND ${clashRound}! (-1 Agent Coin)`;
+          agent.sanity = Math.max(-45, agent.sanity - 8);
+        }
+
+        clashRound++;
+        await sleep(500 / State.battleSpeedMultiplier);
+      }
+
+      // Determine Clash Winner
+      if (agentCoinsLeft > bossCoinsLeft) {
+        clashWinner = 'agent';
+        bossPart.actionCancelled = true; // Boss attack cancelled!
+        logCombat(`[CLASH VICTORY] ${agent.name} memenangkan Clash melawan ${bossPart.name}! Skill musuh CANCELLED.`);
+      } else {
+        clashWinner = 'boss';
+        logCombat(`[CLASH DEFEAT] ${bossPart.name} memenangkan Clash melawan ${agent.name}! Serangan musuh tembus.`);
+      }
+
+      modal.style.display = 'none';
+
+      // Winner deals damage with remaining coins
+      if (clashWinner === 'agent') {
+        await runDamageResolution(agent, agentSkill, bossPart, agentCoinsLeft, true);
+      } else {
+        await runDamageResolution(bossPart, bossSkill, agent, bossCoinsLeft, false);
+      }
+    }
+
+    function renderClashCoinPips(containerId, count) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = Array(count).fill(0).map(() => `
+        <div class="clash-coin heads">●</div>
+      `).join('');
+    }
+
+    function triggerClashSparkCanvas() {
+      const canvas = document.getElementById('clash-spark-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, 160, 160);
+
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 8; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const len = 30 + Math.random() * 45;
+        ctx.beginPath();
+        ctx.moveTo(80, 80);
+        ctx.lineTo(80 + Math.cos(angle) * len, 80 + Math.sin(angle) * len);
+        ctx.stroke();
+      }
+    }
+
+    /* One-sided Attack when target has no opposing skill */
+    async function runOneSidedAttack(attacker, skill, defender, isAttackerPlayer) {
+      logCombat(`[ONE-SIDED ATTACK] ${attacker.name} melancarkan ${skill.name} langsung ke ${defender.name}!`);
+      await runDamageResolution(attacker, skill, defender, skill.coinCount, isAttackerPlayer);
+    }
+
+    /* Calculate & apply damage */
+    async function runDamageResolution(attacker, skill, defender, hitCount, isAttackerPlayer) {
+      sound.playSlashHit();
+
+      // Base Damage = BasePower + (CoinVal * hitCount)
+      let rawDamage = skill.basePower + (skill.coinVal * Math.max(1, hitCount));
+
+      // Resistance multiplier
+      const skillTypeKey = skill.type.toLowerCase(); // 'slash' | 'pierce' | 'blunt'
+      const resist = defender.resistances[skillTypeKey] || 1.0;
+      let finalDamage = Math.round(rawDamage * resist);
+
+      // Stagger damage bonus
+      if (defender.isStaggered) {
+        finalDamage = Math.round(finalDamage * 1.5);
+      }
+
+      // Hyper-Density multiplier
+      if (State.currentGravityField === 'hyper_density') {
+        finalDamage = Math.round(finalDamage * 1.3);
+      }
+
+      // Apply damage
+      defender.hp = Math.max(0, defender.hp - finalDamage);
+
+      // Spawn damage floater popup
+      spawnDamageNumber(defender, finalDamage, skillTypeKey);
+
+      logCombat(`-> Damage dealt: ${finalDamage} (${skillTypeKey.toUpperCase()} x${resist}) to ${defender.name}. Sisa HP: ${defender.hp}`);
+
+      // Check Stagger on Defender
+      if (!defender.isStaggered && defender.staggerThreshold && defender.hp <= defender.staggerThreshold) {
+        defender.isStaggered = true;
+        sound.playStaggerShatter();
+        shakeScreen();
+        spawnDamageNumber(defender, "STAGGER!!", "stagger");
+        logCombat(`[STAGGER TRIGGERED] ${defender.name} mengalami STAGGER! Pertahanan remuk & kehilangan giliran!`);
+      }
+
+      // Zane Ultimate instant nuke cancel check
+      if (skill.id === 'cataclysmic_chain' && isAttackerPlayer) {
+        defender.isStaggered = true;
+        defender.actionCancelled = true;
+        showSpeechBark("CATACLYSMIC IMPACT! Boss Nuke Cancelled!", attacker.id);
+      }
+
+      // Kira Ultimate bonus on staggered
+      if (skill.id === 'event_horizon_reaping' && defender.isStaggered) {
+        const bonusDmg = Math.round(finalDamage * 0.5);
+        defender.hp = Math.max(0, defender.hp - bonusDmg);
+        spawnDamageNumber(defender, `+${bonusDmg} EXECUTE!`, 'slash');
+      }
+
+      // Grant resonance point on successful hit
+      if (isAttackerPlayer && State.gravitonResonance < 5) {
+        State.gravitonResonance++;
+        updateGravityHud();
+      }
+
+      await sleep(550 / State.battleSpeedMultiplier);
+    }
+
+    function spawnDamageNumber(target, text, type) {
+      const floater = document.createElement('div');
+      floater.className = `damage-floater dmg-${type}`;
+      floater.textContent = text;
+
+      // Calculate position
+      const isBossPart = target.id && target.id.includes('_');
+      let targetEl = isBossPart ? document.getElementById(`boss-part-${target.id}`) : document.getElementById(`agent-card-${target.id}`);
+      if (!targetEl) targetEl = document.getElementById('boss-sprite-anchor');
+
+      const rect = targetEl.getBoundingClientRect();
+      floater.style.left = `${rect.left + rect.width / 2 + (Math.random() - 0.5) * 40}px`;
+      floater.style.top = `${rect.top + 20}px`;
+
+      document.body.appendChild(floater);
+      setTimeout(() => floater.remove(), 1000);
+    }
+
+    function showSpeechBark(text, agentId) {
+      const container = document.getElementById('bark-anchor-zone');
+      const bubble = document.createElement('div');
+      bubble.className = 'speech-bark-bubble';
+      bubble.textContent = text;
+      container.appendChild(bubble);
+      setTimeout(() => bubble.remove(), 2600);
+    }
+
+    function shakeScreen() {
+      const app = document.getElementById('app-container');
+      app.style.transform = `translate(${(Math.random() - 0.5) * 12}px, ${(Math.random() - 0.5) * 12}px)`;
+      setTimeout(() => app.style.transform = 'none', 120);
+    }
+
+    function finishTurnCycle() {
+      State.round++;
+      State.isExecutingClash = false;
+      document.getElementById('btn-start-combat').disabled = false;
+
+      // Unstagger parts that completed their stagger turn
+      State.activeBoss.parts.forEach(p => {
+        p.actionCancelled = false;
+        if (p.isStaggered && p.hp > 0) {
+          // Stagger lasts 1 round
+          p.isStaggered = false;
+        }
+      });
+
+      prepareNewRound();
+    }
+
+    /* Check win or defeat */
+    function checkEndgameCondition() {
+      const boss = State.activeBoss;
+      const allPartsDead = boss.parts.every(p => p.hp <= 0);
+
+      if (allPartsDead) {
+        showEndgame(true);
+        return true;
+      }
+
+      const allAgentsDead = State.agents.filter(a => a.deployed).every(a => a.hp <= 0);
+      if (allAgentsDead) {
+        showEndgame(false);
+        return true;
+      }
+
+      return false;
+    }
+
+    function showEndgame(isVictory) {
+      const modal = document.getElementById('endgame-modal');
+      const title = document.getElementById('endgame-headline');
+      const sub = document.getElementById('endgame-subtext');
+
+      if (isVictory) {
+        title.textContent = "SUPPRESSION COMPLETE";
+        title.className = "endgame-title title-victory";
+        sub.textContent = `Anomali ${State.activeBoss.name} berhasil dinetralisir di dalam The Gravimetric Archives.`;
+      } else {
+        title.textContent = "GRAVIMETRIC COLLAPSE";
+        title.className = "endgame-title title-defeat";
+        sub.textContent = "Seluruh Agent gugur di medan gravitasi. Fasilitas kehilangan integritas.";
+      }
+
+      modal.style.display = 'flex';
+    }
+
+    document.getElementById('btn-endgame-return').addEventListener('click', () => {
+      sound.playMetalClick();
+      document.getElementById('endgame-modal').style.display = 'none';
+      document.getElementById('screen-battle').style.display = 'none';
+      document.getElementById('screen-lobby').style.display = 'flex';
+      State.screen = 'lobby';
+      renderLobby();
+    });
+
+    /* ==========================================================================
+       12. COMBAT LOGGING & UTILS
+       ========================================================================== */
+    function logCombat(msg) {
+      State.logs.unshift(msg);
+      if (State.logs.length > 50) State.logs.pop();
+
+      const logBody = document.getElementById('combat-log-body');
+      logBody.innerHTML = State.logs.map(l => `<p style="margin-bottom:4px; font-family:var(--font-tech);">${l}</p>`).join('');
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /* Debug manual field switcher */
+    function forceSetGravityField(fieldId) {
+      sound.playMetalClick();
+      State.currentGravityField = fieldId;
+      updateGravityHud();
+      closeAllModals();
+      showSpeechBark(`GRAV-OVERRIDE: ${GRAVITY_FIELDS[fieldId].name} FORCED!`, 'vane');
+    }
+
+    /* Modal Navigation */
+    document.getElementById('btn-open-archive').addEventListener('click', () => {
+      sound.playMetalClick();
+      document.getElementById('modal-archive').style.display = 'flex';
+    });
+    document.getElementById('btn-open-logs').addEventListener('click', () => {
+      sound.playMetalClick();
+      document.getElementById('modal-logs').style.display = 'flex';
+    });
+    document.getElementById('btn-open-override').addEventListener('click', () => {
+      sound.playMetalClick();
+      document.getElementById('modal-override').style.display = 'flex';
+    });
+
+    function closeAllModals() {
+      document.querySelectorAll('.generic-modal').forEach(m => m.style.display = 'none');
+    }
+
+    // Settings listeners
+    document.getElementById('chk-audio-toggle').addEventListener('change', (e) => {
+      sound.enabled = e.target.checked;
+    });
+    document.getElementById('sel-battle-speed').addEventListener('change', (e) => {
+      State.battleSpeedMultiplier = parseFloat(e.target.value);
+    });
+
+    /* ==========================================================================
+       INITIAL LOAD
+       ========================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      resizeBlueprintCanvas();
+      renderLobby();
+      renderArenaWorld();
+    });
+  </script>
+</body>
+</html>
